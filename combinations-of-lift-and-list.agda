@@ -580,7 +580,9 @@ multlawLcL1 κ ((stepL x ∷ xs) ∷ xss) = (\ i → stepL (\ α → multlawLcL1
 lemma9a : {A : Set} (κ : Cl) → ∀(x : ▹ κ (myLift A κ)) → ∀(y : ▹ κ (myLift (List (myLift A κ)) κ)) →
                    MultL κ (stepL (λ α → stepL (λ β → mapL κ (λ ys → distlawLcL κ (x α ∷ ys)) (y β)))) ≡
                    MultL κ (stepL (λ β → stepL (λ α → mapL κ (λ ys → distlawLcL κ (x α ∷ ys)) (y β))))
-lemma9a κ x y = {!!}
+lemma9a κ x y = cong (MultL κ) (cong stepL (later-ext λ α → cong stepL (later-ext λ β →
+                     cong₂ (mapL κ) (funExt (λ ys → cong (distlawLcL _) (cong₂ _∷_ (tick-irr x α β) refl)))
+                                    (sym (tick-irr y α β)))))
 
 lemma9 : {A : Set} (κ : Cl) → ∀(x : ▹ κ (myLift A κ)) → ∀(y : myLift (List (myLift A κ)) κ) →
             MultL κ (stepL (λ α → (mapL κ (λ ys → distlawLcL κ (x α ∷ ys)) y))) ≡ MultL κ (mapL κ (λ ys → stepL (λ α → distlawLcL κ (x α ∷ ys))) y)
