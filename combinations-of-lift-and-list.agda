@@ -510,35 +510,35 @@ unitlawLcL2 κ (x ∷ xs) = mapL κ (λ ys → x ∷ ys) (distlawLcL κ (map now
 -- and then concatenating the result.
 -- The lemma is split into two parts, first the general result as described in words here,
 -- followed by the specific situation in which I need it in the proofs below.
-lemma7a : {A : Set} → ∀(x : A) → ∀(xss : (List (List A))) → List-mult ((x ∷ safe-head [] xss) ∷ tail xss ) ≡ List-mult (([ x ]) ∷ xss)
-lemma7a x [] = refl
-lemma7a x (xs ∷ xss) = refl
+lemma-frontfront-a : {A : Set} → ∀(x : A) → ∀(xss : (List (List A))) → List-mult ((x ∷ safe-head [] xss) ∷ tail xss ) ≡ List-mult (([ x ]) ∷ xss)
+lemma-frontfront-a x [] = refl
+lemma-frontfront-a x (xs ∷ xss) = refl
 
-lemma7b : {A : Set} (κ : Cl) → ∀(y : myLift (List (List A)) κ) → ∀(x : A) →
-           mapL κ (λ xss → List-mult ((x ∷ safe-head [] xss) ∷ tail xss)) y ≡ mapL κ (λ xss → List-mult (([ x ]) ∷ xss)) y
-lemma7b κ (nowL xss) x = cong nowL (lemma7a x xss)
-lemma7b κ (stepL xss) x = (\ i → stepL (\ α → lemma7b κ (xss α) x i ))
+lemma-frontfront-b : {A : Set} (κ : Cl) → ∀(y : myLift (List (List A)) κ) → ∀(x : A) →
+                      mapL κ (λ xss → List-mult ((x ∷ safe-head [] xss) ∷ tail xss)) y ≡ mapL κ (λ xss → List-mult (([ x ]) ∷ xss)) y
+lemma-frontfront-b κ (nowL xss) x = cong nowL (lemma-frontfront-a x xss)
+lemma-frontfront-b κ (stepL xss) x = (\ i → stepL (\ α → lemma-frontfront-b κ (xss α) x i ))
 
 -- in addition, I need this rather technical lemma that allows me to pull a mapL through the distributive law.
 -- without it, I could not finish the proof.
-lemma8 :  {A : Set} (κ : Cl) → ∀(x : A) → ∀(xs : myLift (List A) κ) → ∀(xss : List (myLift (List A) κ)) →
+lemma-mapdist :  {A : Set} (κ : Cl) → ∀(x : A) → ∀(xs : myLift (List A) κ) → ∀(xss : List (myLift (List A) κ)) →
                  mapL κ (λ yss → ((x ∷ safe-head [] yss) ∷ tail yss)) (distlawLcL κ (xs ∷ xss)) ≡ distlawLcL κ (mapL κ (λ ys → x ∷ ys) xs ∷ xss)
-lemma8 κ x (nowL ys) [] = refl
-lemma8 κ x (stepL ys) [] = (\ i → stepL (λ α → lemma8 κ x (ys α) [] i ))
-lemma8 κ x (nowL []) (zs ∷ xss) =  mapL κ (λ yss → (x ∷ safe-head [] yss) ∷ tail yss) (mapL κ (λ zss → [] ∷ zss) (distlawLcL κ (zs ∷ xss)))
-                                   ≡⟨ mapmapL κ ((λ zss → [] ∷ zss)) ((λ yss → (x ∷ safe-head [] yss) ∷ tail yss)) (distlawLcL κ (zs ∷ xss)) ⟩
-                                   mapL κ (λ yss → (x ∷ safe-head [] ([] ∷ yss)) ∷ tail ([] ∷ yss)) (distlawLcL κ (zs ∷ xss))
-                                   ≡⟨ refl ⟩
-                                   mapL κ (λ yss → (x ∷ []) ∷ yss) (distlawLcL κ (zs ∷ xss)) ∎
-lemma8 κ x (nowL (y ∷ ys)) (zs ∷ xss) = mapL κ (λ yss → (x ∷ safe-head [] yss) ∷ tail yss) (mapL κ (λ zss → (y ∷ ys) ∷ zss) (distlawLcL κ (zs ∷ xss)))
-                                         ≡⟨ mapmapL κ ((λ zss → (y ∷ ys) ∷ zss)) ((λ yss → (x ∷ safe-head [] yss) ∷ tail yss)) (distlawLcL κ (zs ∷ xss)) ⟩
-                                         mapL κ (λ yss → (x ∷ safe-head []((y ∷ ys) ∷ yss)) ∷ tail((y ∷ ys) ∷ yss)) (distlawLcL κ (zs ∷ xss))
+lemma-mapdist κ x (nowL ys) [] = refl
+lemma-mapdist κ x (stepL ys) [] = (\ i → stepL (λ α → lemma-mapdist κ x (ys α) [] i ))
+lemma-mapdist κ x (nowL []) (zs ∷ xss) = mapL κ (λ yss → (x ∷ safe-head [] yss) ∷ tail yss) (mapL κ (λ zss → [] ∷ zss) (distlawLcL κ (zs ∷ xss)))
+                                         ≡⟨ mapmapL κ ((λ zss → [] ∷ zss)) ((λ yss → (x ∷ safe-head [] yss) ∷ tail yss)) (distlawLcL κ (zs ∷ xss)) ⟩
+                                         mapL κ (λ yss → (x ∷ safe-head [] ([] ∷ yss)) ∷ tail ([] ∷ yss)) (distlawLcL κ (zs ∷ xss))
                                          ≡⟨ refl ⟩
-                                         mapL κ (λ yss → (x ∷ y ∷ ys) ∷ yss) (distlawLcL κ (zs ∷ xss)) ∎
-lemma8 κ x (stepL ys) (zs ∷ xss) = (\ i → stepL (λ α → lemma8 κ x (ys α) (zs ∷ xss) i ))
+                                         mapL κ (λ yss → (x ∷ []) ∷ yss) (distlawLcL κ (zs ∷ xss)) ∎
+lemma-mapdist κ x (nowL (y ∷ ys)) (zs ∷ xss) = mapL κ (λ yss → (x ∷ safe-head [] yss) ∷ tail yss) (mapL κ (λ zss → (y ∷ ys) ∷ zss) (distlawLcL κ (zs ∷ xss)))
+                                               ≡⟨ mapmapL κ ((λ zss → (y ∷ ys) ∷ zss)) ((λ yss → (x ∷ safe-head [] yss) ∷ tail yss)) (distlawLcL κ (zs ∷ xss)) ⟩
+                                               mapL κ (λ yss → (x ∷ safe-head []((y ∷ ys) ∷ yss)) ∷ tail((y ∷ ys) ∷ yss)) (distlawLcL κ (zs ∷ xss))
+                                               ≡⟨ refl ⟩
+                                               mapL κ (λ yss → (x ∷ y ∷ ys) ∷ yss) (distlawLcL κ (zs ∷ xss)) ∎
+lemma-mapdist κ x (stepL ys) (zs ∷ xss) = (\ i → stepL (λ α → lemma-mapdist κ x (ys α) (zs ∷ xss) i ))
 
 
---now we are ready to prove the multiplication laws:
+-- now we are ready to prove the fisrt multiplication law:
 multlawLcL1 : {A : Set} (κ : Cl) → ∀(xss : List (List (myLift A κ))) → distlawLcL κ (List-mult xss) ≡
                                      mapL κ List-mult (distlawLcL κ (map (distlawLcL κ) xss))
 multlawLcL1 κ [] = refl
@@ -567,32 +567,34 @@ multlawLcL1 κ ((nowL x ∷ y ∷ xs) ∷ xss) = mapL κ (λ ys → x ∷ ys) (d
                                             mapL κ (λ yss → x ∷ List-mult yss) (distlawLcL κ (distlawLcL κ (y ∷ xs) ∷ map (distlawLcL κ) xss))
                                             ≡⟨ refl ⟩
                                             mapL κ (λ yss → List-mult (([ x ]) ∷ yss)) (distlawLcL κ (distlawLcL κ (y ∷ xs) ∷ map (distlawLcL κ) xss))
-                                            ≡⟨ sym (lemma7b κ ((distlawLcL κ (distlawLcL κ (y ∷ xs) ∷ map (distlawLcL κ) xss))) x) ⟩
+                                            ≡⟨ sym (lemma-frontfront-b κ ((distlawLcL κ (distlawLcL κ (y ∷ xs) ∷ map (distlawLcL κ) xss))) x) ⟩
                                             mapL κ (λ yss → List-mult ((x ∷ safe-head [] yss) ∷ tail yss)) (distlawLcL κ (distlawLcL κ (y ∷ xs) ∷ map (distlawLcL κ) xss)) 
                                             ≡⟨ sym (mapmapL κ ((λ yss → ((x ∷ safe-head [] yss) ∷ tail yss))) List-mult
                                                 ((distlawLcL κ (distlawLcL κ (y ∷ xs) ∷ map (distlawLcL κ) xss)))) ⟩
                                             mapL κ List-mult (mapL κ (λ yss → ((x ∷ safe-head [] yss) ∷ tail yss)) (distlawLcL κ (distlawLcL κ (y ∷ xs) ∷ map (distlawLcL κ) xss)))
-                                            ≡⟨ cong (mapL κ List-mult) (lemma8 κ x ((distlawLcL κ (y ∷ xs))) ((map (distlawLcL κ) xss))) ⟩
+                                            ≡⟨ cong (mapL κ List-mult) (lemma-mapdist κ x ((distlawLcL κ (y ∷ xs))) ((map (distlawLcL κ) xss))) ⟩
                                             mapL κ List-mult (distlawLcL κ (mapL κ (λ ys → x ∷ ys) (distlawLcL κ (y ∷ xs)) ∷ (map (distlawLcL κ) xss))) ∎
 multlawLcL1 κ ((stepL x ∷ xs) ∷ xss) = (\ i → stepL (\ α → multlawLcL1 κ ((x α ∷ xs) ∷ xss) i ))
 
-
-lemma9a : {A : Set} (κ : Cl) → ∀(x : ▹ κ (myLift A κ)) → ∀(y : ▹ κ (myLift (List (myLift A κ)) κ)) →
+-- For the second multiplication law, I need tick-irrelevance, which allows me to pull a map through a step.
+-- The two lemmas below capture the technicalities.
+lemma-tickirr : {A : Set} (κ : Cl) → ∀(x : ▹ κ (myLift A κ)) → ∀(y : ▹ κ (myLift (List (myLift A κ)) κ)) →
                    MultL κ (stepL (λ α → stepL (λ β → mapL κ (λ ys → distlawLcL κ (x α ∷ ys)) (y β)))) ≡
                    MultL κ (stepL (λ β → stepL (λ α → mapL κ (λ ys → distlawLcL κ (x α ∷ ys)) (y β))))
-lemma9a κ x y = cong (MultL κ) (cong stepL (later-ext λ α → cong stepL (later-ext λ β →
-                     cong₂ (mapL κ) (funExt (λ ys → cong (distlawLcL _) (cong₂ _∷_ (tick-irr x α β) refl)))
-                                    (sym (tick-irr y α β)))))
+lemma-tickirr κ x y = cong (MultL κ) (cong stepL (later-ext λ α → cong stepL (later-ext λ β →
+                      cong₂ (mapL κ) (funExt (λ ys → cong (distlawLcL _) (cong₂ _∷_ (tick-irr x α β) refl)))
+                      (sym (tick-irr y α β)))))
 
-lemma9 : {A : Set} (κ : Cl) → ∀(x : ▹ κ (myLift A κ)) → ∀(y : myLift (List (myLift A κ)) κ) →
-            MultL κ (stepL (λ α → (mapL κ (λ ys → distlawLcL κ (x α ∷ ys)) y))) ≡ MultL κ (mapL κ (λ ys → stepL (λ α → distlawLcL κ (x α ∷ ys))) y)
-lemma9 κ x (nowL y) = refl
-lemma9 κ x (stepL y) = stepL (λ α → stepL (λ β → MultL κ (mapL κ (λ ys → distlawLcL κ (x α ∷ ys)) (y β))))
-                        ≡⟨ lemma9a κ x y ⟩
-                        stepL (λ β → stepL (λ α → MultL κ (mapL κ (λ ys → distlawLcL κ (x α ∷ ys)) (y β))))
-                        ≡⟨ ( (\ i → stepL (\ β → lemma9 κ x (y β) i ))) ⟩
-                        stepL (λ β → MultL κ (mapL κ (λ ys → stepL (λ α → distlawLcL κ (x α ∷ ys))) (y β))) ∎
+lemma-mapstep : {A : Set} (κ : Cl) → ∀(x : ▹ κ (myLift A κ)) → ∀(y : myLift (List (myLift A κ)) κ) →
+                MultL κ (stepL (λ α → (mapL κ (λ ys → distlawLcL κ (x α ∷ ys)) y))) ≡ MultL κ (mapL κ (λ ys → stepL (λ α → distlawLcL κ (x α ∷ ys))) y)
+lemma-mapstep κ x (nowL y) = refl
+lemma-mapstep κ x (stepL y) = stepL (λ α → stepL (λ β → MultL κ (mapL κ (λ ys → distlawLcL κ (x α ∷ ys)) (y β))))
+                              ≡⟨ lemma-tickirr κ x y ⟩
+                              stepL (λ β → stepL (λ α → MultL κ (mapL κ (λ ys → distlawLcL κ (x α ∷ ys)) (y β))))
+                              ≡⟨ ( (\ i → stepL (\ β → lemma-mapstep κ x (y β) i ))) ⟩
+                              stepL (λ β → MultL κ (mapL κ (λ ys → stepL (λ α → distlawLcL κ (x α ∷ ys))) (y β))) ∎
 
+-- Proving the second multiplication law:
 multlawLcL2 : {A : Set} (κ : Cl) → ∀(xs : List (myLift (myLift A κ) κ)) → distlawLcL κ (map (MultL κ) xs) ≡
                                      MultL κ (mapL κ (distlawLcL κ) (distlawLcL κ xs))
 multlawLcL2 κ [] = refl
@@ -622,7 +624,7 @@ multlawLcL2 κ (nowL (stepL x) ∷ xs) = distlawLcL κ ((stepL x) ∷ map (MultL
                                         MultL κ (stepL (λ α → (mapL κ (distlawLcL κ) (mapL κ (λ ys → x α ∷ ys) (distlawLcL κ xs)))))
                                         ≡⟨ cong (MultL κ) ((λ i → stepL (\ α → (mapmapL κ ((λ ys → x α ∷ ys)) ((distlawLcL κ)) ((distlawLcL κ xs))) i ))) ⟩
                                         MultL κ (stepL (λ α → (mapL κ (λ ys → distlawLcL κ (x α ∷ ys)) (distlawLcL κ xs))))
-                                        ≡⟨ lemma9 κ x (distlawLcL κ xs) ⟩
+                                        ≡⟨ lemma-mapstep κ x (distlawLcL κ xs) ⟩
                                         MultL κ (mapL κ (λ ys → stepL (λ α → distlawLcL κ (x α ∷ ys))) (distlawLcL κ xs))
                                         ≡⟨ refl ⟩
                                         MultL κ (mapL κ (λ ys → (distlawLcL κ) ((stepL x) ∷ ys)) (distlawLcL κ xs))
