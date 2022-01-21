@@ -1,0 +1,95 @@
+{-# OPTIONS --cubical --guarded -W ignore #-}
+module combinations-of-lift-and-multiset where
+
+open import Clocked.Primitives
+open import Cubical.Foundations.Prelude
+open import Cubical.Data.List as List
+open import Cubical.Data.List.Properties
+open import Cubical.Data.Sum using (_⊎_; inl; inr)
+open import combinations-of-lift-and-list
+
+--**************************************************************************--
+--**************************************************************************--
+-- Combining the monads Lift and Multiset freely and via a distributive law --
+--**************************************************************************--
+--**************************************************************************--
+
+-- In this document I want to define a monad, called MultiLift, that is the free combination of the Lift monad and the Multiset monad.
+-- In order to do so, I will first define the the Multiset monad, and check that it is indeed a monad (Step 1).
+-- Then I define the LiftMulti monad, check that it is a monad (Step 2), and finally check that it is the free monad on the algebra
+-- structures of a delay algebra and a monoid (Step 3).
+-- The Lift monad has aleady been defined in my earlier work, combinations-of-lift-and-list.
+-- In the same file I check that lift is indeed a monad, and define various usefull functions, such as a map function for Lift.
+
+-- In addition to the free combination of the Multiset and the Lift monads, I also compose the two monads to form the monad
+-- LcM : A → Lift(Multiset A). This composition uses a distributive law, which I prove does indeed satisfy all the axioms for a
+-- distributive law.
+
+
+--****************************--
+-- Step 1: The Multiset monad --
+--****************************--
+
+--This code is based on the finite powerset example from:
+--https://github.com/niccoloveltri/final-pfin/blob/main/Pfin/AsFreeJoinSemilattice.agda
+
+--We define the multiset monad as the free commutative monoid monad on A.
+--This is a HIT.
+
+data Multiset {ℓ} (A : Type ℓ) : Type ℓ where
+  m∅        : Multiset A
+  unitM     : A → Multiset A
+  _∪ₘ_      : Multiset A → Multiset A → Multiset A
+  ass       : ∀ x y z → x ∪ₘ (y ∪ₘ z) ≡ (x ∪ₘ y) ∪ₘ z
+  com       : ∀ x y → x ∪ₘ y ≡ y ∪ₘ x
+  unitr     : ∀ x → x ∪ₘ m∅ ≡ x
+  trunc     : isSet (Multiset A)
+
+
+-- map function for Multiset
+mapM : {A B : Set} → (A → B) → Multiset A → Multiset B
+mapM f m∅ = m∅
+mapM f (unitM x) = unitM (f x)
+mapM f (M ∪ₘ N) = (mapM f M) ∪ₘ (mapM f N)
+mapM f (ass M M₁ M₂ i) = ass (mapM f M) (mapM f M₁) (mapM f M₂) i
+mapM f (com M N i) = com (mapM f M) (mapM f N) i
+mapM f (unitr M i) = unitr (mapM f M) i
+mapM f (trunc M N x y i i₁) = trunc (mapM f M) (mapM f N) (λ j → mapM f (x j)) (λ j → mapM f (y j)) i i₁
+
+-- Bind an multiplication functions for Multiset
+Multiset-bind : {A B : Set} → (A → Multiset B) → Multiset A → Multiset B
+Multiset-bind f m∅ = m∅
+Multiset-bind f (unitM a) = f a
+Multiset-bind f (x ∪ₘ y) = (Multiset-bind f x) ∪ₘ (Multiset-bind f y)
+Multiset-bind f (ass x y z i) = ass (Multiset-bind f x) (Multiset-bind f y) (Multiset-bind f z) i
+Multiset-bind f (com x y i) = com (Multiset-bind f x) (Multiset-bind f y) i
+Multiset-bind f (unitr x i) = unitr (Multiset-bind f x) i
+Multiset-bind f (trunc s₁ s₂ x y i i₁) = trunc (Multiset-bind f s₁) (Multiset-bind f s₂) (\ j → Multiset-bind f (x j)) (\ j → Multiset-bind f (y j)) i i₁
+
+Multiset-mult : {A : Set} → Multiset (Multiset A) → Multiset A
+Multiset-mult m∅ = m∅
+Multiset-mult (unitM x) = x
+Multiset-mult (x ∪ₘ y) = (Multiset-mult x) ∪ₘ (Multiset-mult y)
+Multiset-mult (ass x y z i) = ass (Multiset-mult x) (Multiset-mult y) (Multiset-mult z) i
+Multiset-mult (com x y i) = com (Multiset-mult x) (Multiset-mult y) i
+Multiset-mult (unitr x i) = unitr (Multiset-mult x) i
+Multiset-mult (trunc s₁ s₂ x y i i₁) = trunc (Multiset-mult s₁) (Multiset-mult s₂) (\ j → Multiset-mult (x j)) (\ j → Multiset-mult (y j)) i i₁
+
+-- Proving that this forms a monad
+
+--Multiset-mult (unitM M) = M
+Multiset-unitlaw1 : {A : Set} → ∀(M : Multiset A) → Multiset-mult (unitM M) ≡ M
+Multiset-unitlaw1 M = refl
+
+-- Multiset-mult (map List-unit L) = L
+Multiset-unitlaw2 : {A : Set} → ∀(M : Multiset A) → Multiset-mult (mapM unitM M) ≡ M
+Multiset-unitlaw2 m∅ = refl
+Multiset-unitlaw2 (unitM x) = refl
+Multiset-unitlaw2 (M ∪ₘ N) = cong₂ (_∪ₘ_) (Multiset-unitlaw2 M) (Multiset-unitlaw2 N)
+Multiset-unitlaw2 (ass M M₁ M₂ i) = {!!}
+Multiset-unitlaw2 (com M N i) = {!!}
+Multiset-unitlaw2 (unitr M i) = {!!}
+Multiset-unitlaw2 (trunc M N x y i i₁) = {!!}
+
+
+
