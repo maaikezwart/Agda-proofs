@@ -2,8 +2,7 @@
 module combinations-of-lift-and-multiset where
 
 open import Clocked.Primitives
-open import Cubical.Foundations.Prelude
-open import Cubical.Foundations.HLevels
+open import Cubical.Foundations.Everything
 open import Cubical.Data.List as List
 open import Cubical.Data.List.Properties
 open import Cubical.Data.Sum using (_⊎_; inl; inr)
@@ -224,20 +223,25 @@ module _ {ℓ}{A : Set}{κ : Cl}
 
 
 --and proof that MultiLift is a set:
-truncML : {A : Set} {κ : Cl} → isSet (MultiLift A κ)
-truncML (conML x) (conML y) z w = {!!}
+--strategy: build isomorphism, then make equavalence, then use univalence to turn equivalence into equality, then transport.
+
+isoML :  {A : Set}{κ : Cl} → Iso (Multiset (A ⊎ (▹ κ (MultiLift A κ)))) (MultiLift A κ)  
+Iso.fun isoML = conML
+Iso.inv isoML (conML x) = x
+Iso.rightInv isoML (conML x) = refl
+Iso.leftInv isoML a = refl
+
+equivML :  {A : Set}{κ : Cl} → (Multiset (A ⊎ (▹ κ (MultiLift A κ)))) ≃ (MultiLift A κ)
+equivML = isoToEquiv isoML
+
+equalML : {A : Set}{κ : Cl} → (Multiset (A ⊎ (▹ κ (MultiLift A κ)))) ≡ (MultiLift A κ)
+equalML = ua equivML
 
 lemma0 : {A : Set}{κ : Cl} → isSet (Multiset (A ⊎ (▹ κ (MultiLift A κ)))) → isSet (MultiLift A κ)
-lemma0 set1 = {!!}
+lemma0 setM = subst⁻ isSet (sym equalML) setM
 
-lemma1 : {A : Set}{κ : Cl} → isSet (A ⊎ (▹ κ (MultiLift A κ))) → isSet (Multiset (A ⊎ (▹ κ (MultiLift A κ))))
-lemma1 set2 = trunc
-
-lemma2 : {A : Set}{κ : Cl} → isSet A → isSet (▹ κ (MultiLift A κ)) → isSet (A ⊎ (▹ κ (MultiLift A κ)))
-lemma2 = {!!}
-
-lemma3 : {A : Set}{κ : Cl} → isSet (▹ κ (MultiLift A κ))
-lemma3 = {!λ α → later-ext ? !}
+truncML : {A : Set} {κ : Cl} → isSet (MultiLift A κ)
+truncML = lemma0 trunc
 
 --a map function to turn MultiLift into a functor
 mapML : {A B : Set} (κ : Cl) → (f : A → B) → (MultiLift A κ) → (MultiLift B κ)
