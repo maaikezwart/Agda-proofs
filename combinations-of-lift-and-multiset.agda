@@ -171,29 +171,6 @@ nattrans-MultisetMult f MM = elimM
 data MultiLift (A : Set) (κ : Cl) : Set where
   conML : Multiset (A ⊎ (▹ κ (MultiLift A κ))) -> MultiLift A κ
 
---***algebraic structure for ListLift***--
-
---nowML and stepML turn MultiLift into a delay algebra structure:
-nowML : {A : Set} (κ : Cl) → A → (MultiLift A κ)
-nowML κ a = conML (unitM (inl a))
-
-stepML : {A : Set} (κ : Cl) → ▹ κ (MultiLift A κ) → (MultiLift A κ)
-stepML κ a = conML (unitM (inr a))
-
---the union is derived from the multiset union, and turns MultiLift into a monoid:
-_∪ₘₗ_ : {A : Set} {κ : Cl} → (MultiLift A κ) → (MultiLift A κ) → (MultiLift A κ)
-_∪ₘₗ_ {A} {κ} (conML m) (conML n) = conML (m ∪ₘ n)
-
---proof that this union does indeed provide a commutative monoid structure: 
-assoc∪ₘₗ : {A : Set} {κ : Cl} → ∀(ml nl ol : (MultiLift A κ)) → (ml ∪ₘₗ nl) ∪ₘₗ ol ≡ ml ∪ₘₗ (nl ∪ₘₗ ol)
-assoc∪ₘₗ {A} {κ} (conML m) (conML n) (conML o) = cong conML (sym (ass m n o))
-
-comm∪ₘₗ : {A : Set} {κ : Cl} → ∀(ml nl : (MultiLift A κ)) → ml ∪ₘₗ nl ≡ nl ∪ₘₗ ml
-comm∪ₘₗ {A} {κ} (conML m) (conML n) = cong conML (com m n)
-
-unitr∪ₘₗ : {A : Set} {κ : Cl} → ∀ (ml : (MultiLift A κ)) → ml ∪ₘₗ conML m∅ ≡ ml
-unitr∪ₘₗ {A} {κ} (conML m) = cong conML (unitr m )
-
 -- Elimination principle for MultiLift
 
 -- module to make the inputs more readable
@@ -220,10 +197,8 @@ module _ {ℓ}{A : Set}{κ : Cl}
   elimML (conML (trunc M N x y i j)) = isOfHLevel→isOfHLevelDep 2 (λ z → isProp→isSet (snd (P (conML z)))) (elimML (conML M)) (elimML (conML N))
                                         (cong elimML (cong conML x)) (cong elimML (cong conML y)) (trunc M N x y ) i j
 
-
-
---and proof that MultiLift is a set:
---strategy: build isomorphism, then make equavalence, then use univalence to turn equivalence into equality, then transport.
+--***proof that MultiLift is a set***--
+-- strategy: build isomorphism, then make equivalence, then use univalence to turn equivalence into equality, then transport.
 
 isoML :  {A : Set}{κ : Cl} → Iso (Multiset (A ⊎ (▹ κ (MultiLift A κ)))) (MultiLift A κ)  
 Iso.fun isoML = conML
@@ -237,11 +212,33 @@ equivML = isoToEquiv isoML
 equalML : {A : Set}{κ : Cl} → (Multiset (A ⊎ (▹ κ (MultiLift A κ)))) ≡ (MultiLift A κ)
 equalML = ua equivML
 
-lemma0 : {A : Set}{κ : Cl} → isSet (Multiset (A ⊎ (▹ κ (MultiLift A κ)))) → isSet (MultiLift A κ)
-lemma0 setM = subst⁻ isSet (sym equalML) setM
-
 truncML : {A : Set} {κ : Cl} → isSet (MultiLift A κ)
-truncML = lemma0 trunc
+truncML = subst⁻ isSet (sym equalML) trunc
+
+--***algebraic structure for MultiLift***--
+
+--nowML and stepML turn MultiLift into a delay algebra structure:
+nowML : {A : Set} (κ : Cl) → A → (MultiLift A κ)
+nowML κ a = conML (unitM (inl a))
+
+stepML : {A : Set} (κ : Cl) → ▹ κ (MultiLift A κ) → (MultiLift A κ)
+stepML κ a = conML (unitM (inr a))
+
+--the union is derived from the multiset union, and turns MultiLift into a monoid:
+_∪ₘₗ_ : {A : Set} {κ : Cl} → (MultiLift A κ) → (MultiLift A κ) → (MultiLift A κ)
+_∪ₘₗ_ {A} {κ} (conML m) (conML n) = conML (m ∪ₘ n)
+
+--proof that this union does indeed provide a commutative monoid structure: 
+assoc∪ₘₗ : {A : Set} {κ : Cl} → ∀(ml nl ol : (MultiLift A κ)) → (ml ∪ₘₗ nl) ∪ₘₗ ol ≡ ml ∪ₘₗ (nl ∪ₘₗ ol)
+assoc∪ₘₗ {A} {κ} (conML m) (conML n) (conML o) = cong conML (sym (ass m n o))
+
+comm∪ₘₗ : {A : Set} {κ : Cl} → ∀(ml nl : (MultiLift A κ)) → ml ∪ₘₗ nl ≡ nl ∪ₘₗ ml
+comm∪ₘₗ {A} {κ} (conML m) (conML n) = cong conML (com m n)
+
+unitr∪ₘₗ : {A : Set} {κ : Cl} → ∀ (ml : (MultiLift A κ)) → ml ∪ₘₗ conML m∅ ≡ ml
+unitr∪ₘₗ {A} {κ} (conML m) = cong conML (unitr m )
+
+--***monadic structure for MultiLift***--
 
 --a map function to turn MultiLift into a functor
 mapML : {A B : Set} (κ : Cl) → (f : A → B) → (MultiLift A κ) → (MultiLift B κ)
@@ -269,7 +266,7 @@ bindML κ f (conML (trunc x y z w i i₁)) = truncML (bindML κ f (conML x)) (bi
 bindML-∪ₘₗ : {A B : Set} (κ : Cl) → ∀(f : A → (MultiLift B κ)) → ∀(ml nl : (MultiLift A κ)) → bindML κ f (ml ∪ₘₗ nl) ≡ (bindML κ f ml) ∪ₘₗ (bindML κ f nl)
 bindML-∪ₘₗ κ f (conML x) (conML y) = refl
 
---***proving that MultiLift is a monad***--
+--***proof that MultiLift is a monad***--
 
 --bindML and nowML need to be natural transformations
 nattrans-nowML : {A B : Set} (κ : Cl) → ∀(f : A → B) → ∀(x : A) → mapML κ f (nowML κ x) ≡ nowML κ (f x)
@@ -278,10 +275,6 @@ nattrans-nowML {A}{B} κ f x = refl
 -- TODO: bindML
 
 -- bindML and nowML also need to satisfy three monad laws:
--- unit is a left-identity for bind: bindML (f, nowML) = f
--- unit is a right-identity for bind: bindML (nowML, x) = x
--- bind is associative: bindML (\x ­> bindML (g, f(x)), x) = bindML(g,bindML(f, x))
-
 -- unit is a left-identity for bind
 unitlawML1 : {A B : Set} (κ : Cl) → ∀ (f : A → (MultiLift B κ)) → ∀ (x : A) → (bindML {A} κ f (nowML κ x)) ≡ f x
 unitlawML1 κ f x = refl
@@ -310,3 +303,384 @@ assoclawML {A} {B} {C} κ f g x = elimML ((λ z → ((bindML κ (\ y → (bindML
                                                            ≡⟨ sym (bindML-∪ₘₗ κ g (bindML κ f (conML m)) (bindML κ f (conML n))) ⟩
                                                             bindML κ g (bindML κ f (conML m) ∪ₘₗ bindML κ f (conML n)) ∎)
                                         x
+
+
+--*************************************************************************************--
+-- Step 3: The MultiLift monad as the free delay-algebra and commutiative monoid monad --
+--*************************************************************************************--
+
+-- We already know that (MultiLift, stepML) forms a delay algebra structure,
+-- and (Multilift, conML m∅ ,  ∪ₘₗ) forms a commutative monoid.
+-- What we need to show is that MultiLift is the free monad with these properties.
+-- That is, for a set A, and any other structure (B, δ, ε, _·_) where (B, δ) is a delay algebra and (B, ε, _·_) a commutative monoid
+-- given a function f : A → B, there is a unique function MultiLift A → B extending f that preserves the algebra structures.
+
+record IsComMonoid {A : Set} (ε : A) (_·_ : A → A → A) : Set where
+  constructor iscommonoid
+
+  field
+    asso : (x y z : A) → (x · y) · z ≡ x · (y · z)
+    comm : (x y : A) → (x · y) ≡ (y · x)
+    uniteq : (x : A) → x · ε ≡ x
+
+record IsDelayComMonoid {A : Set}(κ : Cl) (dm : DelayMonoidData A κ) : Set where
+  constructor isdelaycommonoid
+
+  open DelayMonoidData dm
+  field
+    isComMonoid : IsComMonoid (ε) (_·_)
+    isDelayalg : IsDelayalg κ (nextA)
+
+  open IsComMonoid isComMonoid public
+  open IsDelayalg isDelayalg public
+
+
+record IsExtendingML {A B : Set}{κ : Cl} (f : A → B) (h : (MultiLift A κ) → B) : Set where
+  constructor isextendingML
+
+  field
+    extends : (x : A) → h (nowML κ x) ≡ (f x)
+
+--foldML defines the function we are after
+foldML : {A B : Set}{κ : Cl} → isSet A → isSet B → ∀ dm → IsDelayComMonoid {B} κ dm → (A → B) → (MultiLift A κ) → B
+foldML setA setB (dmdata nextB ε _·_) isDMB f (conML m∅) = ε
+foldML setA setB (dmdata nextB ε _·_) isDMB f (conML (unitM (inl x))) = f x
+foldML setA setB dm@(dmdata nextB ε _·_) isDMB f (conML (unitM (inr x))) = nextB (λ α → foldML setA setB dm isDMB f (x α))
+foldML setA setB dm@(dmdata nextB ε _·_) isDMB f (conML (x ∪ₘ y)) = (foldML setA setB dm isDMB f (conML x)) · (foldML setA setB dm isDMB f (conML y))
+foldML setA setB dm@(dmdata nextB ε _·_) isDMB f (conML (ass x y z i)) = sym (IsDelayComMonoid.asso isDMB (foldML setA setB dm isDMB f (conML x))
+                                                                                                     (foldML setA setB dm isDMB f (conML y))
+                                                                                                     (foldML setA setB dm isDMB f (conML z))) i
+foldML setA setB dm@(dmdata nextB ε _·_) isDMB f (conML (com x y i)) = IsDelayComMonoid.comm isDMB (foldML setA setB dm isDMB f (conML x)) (foldML setA setB dm isDMB f (conML y)) i
+foldML setA setB dm@(dmdata nextB ε _·_) isDMB f (conML (unitr x i)) = IsDelayComMonoid.uniteq isDMB (foldML setA setB dm isDMB f (conML x)) i
+foldML setA setB dm@(dmdata nextB ε _·_) isDMB f (conML (trunc x y x₁ y₁ i i₁)) = setB (foldML setA setB dm isDMB f (conML x))
+                                                                                      (foldML setA setB dm isDMB f (conML y))
+                                                                                      (λ j → (foldML setA setB dm isDMB f (conML (x₁ j))))
+                                                                                      (λ j → (foldML setA setB dm isDMB f (conML (y₁ j))))
+                                                                                      i i₁
+
+
+--foldML extends the function f : A → B
+foldML-extends : {A B : Set}{κ : Cl} → ∀(setA : isSet A) → ∀(setB : isSet B) → ∀ dm → ∀(isDMB : IsDelayComMonoid {B} κ dm) →
+                   ∀ (f : A → B) → IsExtendingML f (foldML setA setB dm isDMB f)
+IsExtendingML.extends (foldML-extends setA setB dm isDMB f) x = refl
+
+-- or a more direct proof of the same fact:
+foldML-extends-f : {A B : Set}{κ : Cl} → ∀(setA : isSet A) → ∀(setB : isSet B) → ∀ dm → ∀(isDMB : IsDelayComMonoid {B} κ dm) →
+                   ∀ (f : A → B) → ∀ (x : A) → foldML setA setB dm isDMB f (nowML κ x) ≡ f x
+foldML-extends-f setA setB dm isDMB f x = refl
+
+--foldML preseves the DelayMonoid structure
+ 
+module _ {A B : Set}{κ : Cl} (setA : isSet A) (setB : isSet B) (dm : _) (isDMB : IsDelayComMonoid {B} κ dm)
+         (f : A → B)
+ where
+  open IsPreservingDM
+  open DelayMonoidData dm renaming (nextA to nextB)
+
+  foldML-preserves : IsPreservingDM {MultiLift A κ}{B} κ (dmdata (stepML κ) (conML m∅) _∪ₘₗ_) dm (foldML setA setB dm isDMB f)
+  unit-preserve foldML-preserves = refl
+  next-preserve foldML-preserves x = cong nextB (later-ext (λ α → refl))
+  union-preserve foldML-preserves (conML x) (conML y) = refl
+
+--and foldML is unique in doing so.
+--That is, for any function h that both preserves the algebra structure
+--and extends the function f : A → B,
+-- h is equivalent to fold.
+
+module _ {A B : Set} {κ : Cl} (h : MultiLift A κ → B)
+                       (setA : isSet A) (setB : isSet B) (dm : _) (isDMB : IsDelayComMonoid {B} κ dm)
+                       (f : A → B) (isPDM : IsPreservingDM {MultiLift A κ}{B} κ (dmdata (stepML κ) (conML m∅) _∪ₘₗ_ ) dm h)
+                       (isExt : IsExtendingML f h) where
+
+  open DelayMonoidData dm renaming (nextA to nextB)
+
+  fold-uniquenessML : (x : (MultiLift A κ)) → h x ≡ (foldML setA setB dm isDMB f x)
+  fold-uniquenessML x = elimML
+                           ((λ x → (h x ≡ (foldML setA setB dm isDMB f x)) , setB (h x) ((foldML setA setB dm isDMB f x))))
+                           (IsPreservingDM.unit-preserve isPDM)
+                           (λ a →  h (conML (unitM (inl a)))
+                                    ≡⟨ refl ⟩
+                                    h (nowML κ a)
+                                    ≡⟨ IsExtendingML.extends isExt a ⟩
+                                    f a ∎)
+                           (λ {x} → λ eq → h (conML (unitM (inr x)))
+                                            ≡⟨ refl ⟩
+                                            h (stepML κ x)
+                                            ≡⟨ IsPreservingDM.next-preserve isPDM x ⟩
+                                            nextB (λ α → h (x α)) 
+                                            ≡⟨ cong nextB (later-ext (λ α → (eq α)))  ⟩ 
+                                            nextB (λ α → foldML setA setB (dmdata nextB ε _·_) isDMB f (x α)) ∎)
+                           (λ {x y} → λ eqx eqy → h (conML (x ∪ₘ y))
+                                                   ≡⟨ refl ⟩
+                                                   h ((conML x) ∪ₘₗ (conML y))
+                                                   ≡⟨ IsPreservingDM.union-preserve isPDM (conML x) (conML y) ⟩
+                                                   (h (conML x) · h (conML y))
+                                                   ≡⟨ cong₂ _·_ eqx eqy ⟩
+                                                   (foldML setA setB (dmdata nextB ε _·_) isDMB f (conML x) ·
+                                                   foldML setA setB (dmdata nextB ε _·_) isDMB f (conML y)) ∎)
+                           x
+
+
+--****************************************************--
+-- Composing Lift and Multiset via a distributive law --
+--****************************************************--
+
+--We now define a composite monad of the Multiset and Lift monads, formed via a distributive law.
+LcM : (A : Set) → (κ : Cl) → Set
+LcM A κ = myLift (Multiset A) κ
+
+-- the unit of this monad is simply the composit of the units for Lift (nowL x) and Multiset (unitM)
+nowLcM : {A : Set} {κ : Cl} → A → (LcM A κ) 
+nowLcM x = nowL (unitM x)
+
+--LcM is a set.
+
+truncLcM : {A : Set} {κ : Cl} → isSet (LcM A κ)
+truncLcM = {!!}
+
+-- we define a union on LcM, which will help in defining the distributive law.
+_l∪m_ : {A : Set} {κ : Cl} → (LcM A κ) → (LcM A κ) → (LcM A κ)
+nowL x l∪m nowL y = nowL (x ∪ₘ y)
+nowL x l∪m stepL y = stepL (λ α → (nowL x l∪m (y α)))
+stepL x l∪m y = stepL (λ α → ((x α) l∪m y))
+
+--l∪m is associative, commutative, and nowL m∅ is a unit for l∪l
+assoc-l∪m : {A : Set} {κ : Cl} → ∀(x y z : LcM A κ) → (x l∪m y) l∪m z ≡ x l∪m (y l∪m z)
+assoc-l∪m (nowL x) (nowL y) (nowL z) = cong nowL (sym (ass x y z))
+assoc-l∪m (nowL x) (nowL y) (stepL z) = cong stepL (later-ext λ α → assoc-l∪m (nowL x) (nowL y) (z α))
+assoc-l∪m (nowL x) (stepL y) z = cong stepL (later-ext λ α → assoc-l∪m (nowL x) (y α) z)
+assoc-l∪m (stepL x) y z = cong stepL (later-ext λ α → assoc-l∪m (x α) y z)
+
+comm-l∪m : {A : Set} {κ : Cl} → ∀(x y : LcM A κ) → (x l∪m y) ≡ y l∪m x
+comm-l∪m (nowL x) (nowL y) = cong nowL (com x y)
+comm-l∪m (nowL x) (stepL y) = cong stepL (later-ext λ α → comm-l∪m (nowL x) (y α))
+comm-l∪m (stepL x) (nowL y) = cong stepL (later-ext λ α → comm-l∪m (x α) (nowL y))
+comm-l∪m (stepL x) (stepL y) = stepL (λ α → x α l∪m stepL y)
+                                 ≡⟨ cong stepL (later-ext λ α → comm-l∪m (x α) (stepL y))  ⟩
+                                 stepL (λ α → stepL y l∪m x α)
+                                 ≡⟨ refl ⟩
+                                 stepL (λ α → stepL (λ β → (y β) l∪m (x α)))
+                                 ≡⟨ cong stepL (later-ext λ α → cong stepL (later-ext λ β → cong₂ _l∪m_ (sym (tick-irr y α β)) (tick-irr x α β) )) ⟩
+                                 stepL (λ α → stepL (λ β → (y α) l∪m (x β)))
+                                 ≡⟨ cong stepL (later-ext λ α → cong stepL (later-ext λ β → comm-l∪m (y α) (x β))) ⟩
+                                 stepL (λ α → stepL (λ β → (x β) l∪m (y α)))
+                                 ≡⟨ refl ⟩
+                                 stepL (λ α → (stepL x) l∪m (y α))
+                                 ≡⟨ cong stepL (later-ext λ α → comm-l∪m (stepL x) (y α)) ⟩
+                                 stepL (λ α → y α l∪m stepL x) ∎
+
+
+unit-l∪m : {A : Set} {κ : Cl} → ∀(x : LcM A κ) → x l∪m (nowL m∅) ≡ x
+unit-l∪m (nowL x) = cong nowL (unitr x)
+unit-l∪m (stepL x) = cong stepL (later-ext λ α → unit-l∪m (x α))
+
+--mapL κ f distributes over l∪m if f distributes over ∪ₘ
+dist-mapL-l∪m : {A B : Set} {κ : Cl} → ∀(f : (Multiset A) → (Multiset B)) → ∀(fdist : ∀(m n : Multiset A) → f (m ∪ₘ n) ≡ f m ∪ₘ f n)
+                                     → ∀(x y : (LcM A κ)) → mapL κ f (x l∪m y) ≡ (mapL κ f x) l∪m (mapL κ f y)
+dist-mapL-l∪m f fdist (nowL x) (nowL y) = cong nowL (fdist x y)
+dist-mapL-l∪m f fdist (nowL x) (stepL y) = cong stepL (later-ext λ α → dist-mapL-l∪m f fdist (nowL x) (y α))
+dist-mapL-l∪m f fdist (stepL x) y = cong stepL (later-ext λ α → dist-mapL-l∪m f fdist (x α) y)
+
+-- LcM is a monad via a distributive law, distributing Multiset over Lift.
+-- Here is the distributive law:
+distlawLcM : {A : Set} {κ : Cl} → Multiset (myLift A κ) → (LcM A κ)
+distlawLcM m∅ = nowL m∅
+distlawLcM (unitM (nowL x)) = nowL (unitM x)
+distlawLcM (unitM (stepL x)) = stepL (λ α → distlawLcM (unitM (x α)))
+distlawLcM (x ∪ₘ y) = (distlawLcM x) l∪m (distlawLcM y)
+distlawLcM (ass x y z i) = assoc-l∪m (distlawLcM x) (distlawLcM y) (distlawLcM z) (~ i)
+distlawLcM (com x y i) = comm-l∪m (distlawLcM x) (distlawLcM y) i
+distlawLcM (unitr x i) = unit-l∪m (distlawLcM x) i
+distlawLcM (trunc x y x₁ y₁ i i₁) = truncLcM (distlawLcM x) (distlawLcM y) (λ j → distlawLcM (x₁ j)) (λ j → distlawLcM (y₁ j)) i i₁
+
+--proof that distlawLcL is indeed a distributive law:
+--unit laws:
+unitlawLcM1 : {A : Set} {κ : Cl} → ∀(x : myLift A κ) → (distlawLcM (unitM x)) ≡  mapL κ unitM x
+unitlawLcM1 (nowL x) = refl
+unitlawLcM1 (stepL x) = cong stepL (later-ext λ α → unitlawLcM1 (x α))
+
+unitlawLcM2 : {A : Set} {κ : Cl} → ∀(M : Multiset A) → (distlawLcM (mapM nowL M)) ≡ nowL M
+unitlawLcM2 M = elimM
+                 (λ N → ((distlawLcM (mapM nowL N) ≡ nowL N) , truncLcM (distlawLcM (mapM nowL N)) (nowL N)))
+                 refl
+                 (λ N → refl)
+                 (λ {M N} → λ eqM eqN → distlawLcM (mapM nowL M) l∪m distlawLcM (mapM nowL N)
+                                         ≡⟨ cong₂ (_l∪m_) eqM eqN ⟩
+                                         ((nowL M) l∪m (nowL N))
+                                         ≡⟨ refl ⟩
+                                         nowL (M ∪ₘ N) ∎ )
+                 M
+
+
+--multiplication laws:
+
+mapL-identity : {A : Set} {κ : Cl} → ∀ (x : myLift A κ) → mapL κ (λ y → y) x ≡ x
+mapL-identity (nowL x) = refl
+mapL-identity (stepL x) = cong stepL (later-ext λ α → mapL-identity (x α))
+
+
+multlawLcM1 : {A : Set} (κ : Cl) → ∀(M : Multiset (Multiset (myLift A κ))) → distlawLcM (Multiset-mult M) ≡
+                                                                             mapL κ Multiset-mult (distlawLcM (mapM distlawLcM M))
+multlawLcM1 κ M = elimM
+                    (λ N → ((distlawLcM (Multiset-mult N) ≡ mapL κ Multiset-mult (distlawLcM (mapM distlawLcM N))) ,
+                     truncLcM (distlawLcM (Multiset-mult N)) (mapL κ Multiset-mult (distlawLcM (mapM distlawLcM N))) ))
+                    refl
+                    (λ N → distlawLcM N
+                            ≡⟨ sym (mapL-identity (distlawLcM N)) ⟩
+                            mapL κ (λ y → y) (distlawLcM N)
+                            ≡⟨ cong₂ (mapL κ) (funExt (λ y → sym (Multiset-unitlaw1 y))) refl ⟩
+                            mapL κ (λ y → Multiset-mult (unitM y)) (distlawLcM N)
+                            ≡⟨ sym (mapmapL κ unitM Multiset-mult (distlawLcM N)) ⟩
+                            mapL κ Multiset-mult (mapL κ unitM (distlawLcM N)) 
+                            ≡⟨ cong (mapL κ Multiset-mult) (sym (unitlawLcM1 (distlawLcM N)))  ⟩
+                            mapL κ Multiset-mult (distlawLcM (unitM (distlawLcM N))) ∎)
+                    (λ {M N} → λ eqM eqN → (distlawLcM (Multiset-mult M) l∪m distlawLcM (Multiset-mult N))
+                              ≡⟨ cong₂ _l∪m_ eqM eqN ⟩
+                              (mapL κ Multiset-mult (distlawLcM (mapM distlawLcM M)) l∪m mapL κ Multiset-mult (distlawLcM (mapM distlawLcM N)))
+                              ≡⟨ sym (dist-mapL-l∪m Multiset-mult (λ x y → refl) (distlawLcM (mapM distlawLcM M)) (distlawLcM (mapM distlawLcM N))) ⟩
+                              mapL κ Multiset-mult (distlawLcM (mapM distlawLcM M) l∪m distlawLcM (mapM distlawLcM N)) ∎)
+                    M 
+
+
+lemma-multlawLcM2-unitMcase-unitMcase : {A : Set} (κ : Cl) → ∀(x : (myLift A κ)) → ∀(y : (myLift (myLift A κ) κ)) → 
+                                          (MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x)))) l∪m MultL κ (mapL κ distlawLcM (distlawLcM (unitM y))))
+                                           ≡ MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x)) l∪m distlawLcM (unitM y)))
+lemma-multlawLcM2-unitMcase-unitMcase κ x (nowL y) = refl
+lemma-multlawLcM2-unitMcase-unitMcase κ x (stepL y) = (distlawLcM (unitM x) l∪m
+                                                        stepL (λ α → MultL κ (mapL κ distlawLcM (distlawLcM (unitM (y α))))))
+                                                        ≡⟨ comm-l∪m (distlawLcM (unitM x))
+                                                                    (stepL (λ α → MultL κ (mapL κ distlawLcM (distlawLcM (unitM (y α)))))) ⟩
+                                                        (stepL (λ α → MultL κ (mapL κ distlawLcM (distlawLcM (unitM (y α))))) l∪m
+                                                         distlawLcM (unitM x))
+                                                        ≡⟨ refl ⟩
+                                                        stepL (λ α → (MultL κ (mapL κ distlawLcM (distlawLcM (unitM (y α)))) l∪m
+                                                        distlawLcM (unitM x)))
+                                                        ≡⟨ cong stepL (later-ext λ α → comm-l∪m (MultL κ (mapL κ distlawLcM (distlawLcM (unitM (y α)))))
+                                                                                                (distlawLcM (unitM x)) ) ⟩
+                                                        stepL (λ α → (distlawLcM (unitM x) l∪m
+                                                        (MultL κ (mapL κ distlawLcM (distlawLcM (unitM (y α)))))))
+                                                        ≡⟨ refl ⟩
+                                                        stepL (λ α → (MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x))))) l∪m
+                                                        (MultL κ (mapL κ distlawLcM (distlawLcM (unitM (y α))))))
+                                                        ≡⟨ cong stepL (later-ext λ α → lemma-multlawLcM2-unitMcase-unitMcase κ x (y α)) ⟩
+                                                        stepL (λ α → MultL κ (mapL κ distlawLcM (nowL (unitM x) l∪m distlawLcM (unitM (y α))))) ∎
+
+lemma-multlawLcM2-unitMcase : {A : Set} (κ : Cl) → ∀(x : (myLift (myLift A κ) κ)) → ∀ (N : Multiset (myLift (myLift A κ) κ)) →
+                                 (MultL κ (mapL κ distlawLcM (distlawLcM (unitM x))) l∪m MultL κ (mapL κ distlawLcM (distlawLcM N)))
+                                  ≡ MultL κ (mapL κ distlawLcM (distlawLcM (unitM x) l∪m distlawLcM N))
+lemma-multlawLcM2-unitMcase κ (nowL x) N = elimM
+                                            (λ N → (((MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x)))) l∪m MultL κ (mapL κ distlawLcM (distlawLcM N)))
+                                                   ≡ (MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x)) l∪m distlawLcM N)))) ,
+                                                   truncLcM (MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x)))) l∪m MultL κ (mapL κ distlawLcM (distlawLcM N)))
+                                                            (MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x)) l∪m distlawLcM N)))
+                                                    ))
+                                            refl
+                                            (λ y → lemma-multlawLcM2-unitMcase-unitMcase κ x y)
+                                            (λ {M N} → λ eqM eqN →
+                                               {!MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x)))) l∪m
+                                                MultL κ (mapL κ distlawLcM (distlawLcM M l∪m distlawLcM N))
+                                                ≡⟨ cong (MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x)))) l∪m_)
+                                                        (sym (lemma-lum κ M N)) ⟩
+                                                (MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x)))) l∪m
+                                                (MultL κ (mapL κ distlawLcM (distlawLcM M)) l∪m
+                                                 MultL κ (mapL κ distlawLcM (distlawLcM N))))
+                                                ≡⟨ sym (assoc-l∪m (MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x)))))
+                                                                  (MultL κ (mapL κ distlawLcM (distlawLcM M)))
+                                                                  (MultL κ (mapL κ distlawLcM (distlawLcM N)))) ⟩
+                                                ((MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x)))) l∪m
+                                                  MultL κ (mapL κ distlawLcM (distlawLcM M))) l∪m
+                                                  MultL κ (mapL κ distlawLcM (distlawLcM N)))
+                                                ≡⟨ cong (_l∪m MultL κ (mapL κ distlawLcM (distlawLcM N)))
+                                                        (lemma-lum κ (unitM (nowL x)) M) ⟩
+                                                (MultL κ (mapL κ distlawLcM (nowL (unitM x) l∪m (distlawLcM M))) l∪m
+                                                 MultL κ (mapL κ distlawLcM (distlawLcM N)))
+                                                ≡⟨ refl ⟩
+                                                (MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x)) l∪m (distlawLcM M))) l∪m
+                                                 MultL κ (mapL κ distlawLcM (distlawLcM N)))
+                                                ≡⟨ refl ⟩
+                                                (MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x) ∪ₘ M))) l∪m
+                                                 MultL κ (mapL κ distlawLcM (distlawLcM N)))
+                                                ≡⟨ lemma-lum κ (unitM (nowL x) ∪ₘ M) N ⟩
+                                                MultL κ (mapL κ distlawLcM ((distlawLcM (unitM (nowL x) ∪ₘ M)) l∪m distlawLcM N))
+                                                ≡⟨ refl ⟩
+                                                MultL κ (mapL κ distlawLcM ((nowL (unitM x) l∪m distlawLcM M) l∪m distlawLcM N))
+                                                ≡⟨ cong (MultL κ) (cong (mapL κ distlawLcM)
+                                                                        (assoc-l∪m (nowL (unitM x)) (distlawLcM M) (distlawLcM N))) ⟩
+                                                MultL κ (mapL κ distlawLcM (nowL (unitM x) l∪m (distlawLcM M l∪m distlawLcM N))) ∎!})
+                                            N
+lemma-multlawLcM2-unitMcase κ (stepL x) N = cong stepL (later-ext λ α → lemma-multlawLcM2-unitMcase κ (x α) N)
+
+lemma-multlawLcM2 : {A : Set} (κ : Cl) → ∀(M N : Multiset (myLift (myLift A κ) κ)) →
+                                 (MultL κ (mapL κ distlawLcM (distlawLcM M)) l∪m MultL κ (mapL κ distlawLcM (distlawLcM N)))
+                                  ≡ MultL κ (mapL κ distlawLcM (distlawLcM M l∪m distlawLcM N))
+
+lemma-multlawLcM2 κ M N = elimM
+                          (λ M → ((MultL κ (mapL κ distlawLcM (distlawLcM M)) l∪m MultL κ (mapL κ distlawLcM (distlawLcM N)))
+                                  ≡ MultL κ (mapL κ distlawLcM (distlawLcM M l∪m distlawLcM N))) ,
+                                  truncLcM (MultL κ (mapL κ distlawLcM (distlawLcM M)) l∪m MultL κ (mapL κ distlawLcM (distlawLcM N)))
+                                            (MultL κ (mapL κ distlawLcM (distlawLcM M l∪m distlawLcM N)))  )
+                          (nowL m∅ l∪m MultL κ (mapL κ distlawLcM (distlawLcM N))
+                             ≡⟨ comm-l∪m (nowL m∅) (MultL κ (mapL κ distlawLcM (distlawLcM N))) ⟩
+                             (MultL κ (mapL κ distlawLcM (distlawLcM N)) l∪m nowL m∅)
+                             ≡⟨ unit-l∪m (MultL κ (mapL κ distlawLcM (distlawLcM N))) ⟩
+                             MultL κ (mapL κ distlawLcM (distlawLcM N))
+                             ≡⟨ cong (MultL κ) (cong (mapL κ distlawLcM) (sym (unit-l∪m (distlawLcM N)))) ⟩
+                             MultL κ (mapL κ distlawLcM (distlawLcM N l∪m nowL m∅ ))
+                             ≡⟨ cong (MultL κ) (cong (mapL κ distlawLcM) (comm-l∪m (distlawLcM N) (nowL m∅))) ⟩
+                             MultL κ (mapL κ distlawLcM (nowL m∅ l∪m distlawLcM N)) ∎ )
+                          (λ x → lemma-multlawLcM2-unitMcase κ x N )
+                          {!!}
+                          M
+
+-- lemma-lum κ (unitM (nowL x)) (M ∪ₘ N) = MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x)))) l∪m MultL κ (mapL κ distlawLcM (distlawLcM M l∪m distlawLcM N))
+--                                          ≡⟨ cong (MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x)))) l∪m_) (sym (lemma-lum κ M N)) ⟩
+--                                          (MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x)))) l∪m
+--                                          (MultL κ (mapL κ distlawLcM (distlawLcM M)) l∪m
+--                                           MultL κ (mapL κ distlawLcM (distlawLcM N))))
+--                                          ≡⟨ sym (assoc-l∪m (MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x)))))
+--                                                            (MultL κ (mapL κ distlawLcM (distlawLcM M)))
+--                                                            (MultL κ (mapL κ distlawLcM (distlawLcM N)))) ⟩
+--                                          ((MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x)))) l∪m
+--                                            MultL κ (mapL κ distlawLcM (distlawLcM M))) l∪m
+--                                           MultL κ (mapL κ distlawLcM (distlawLcM N)))
+--                                          ≡⟨ cong (_l∪m MultL κ (mapL κ distlawLcM (distlawLcM N))) (lemma-lum κ (unitM (nowL x)) M) ⟩
+--                                          (MultL κ (mapL κ distlawLcM (nowL (unitM x) l∪m (distlawLcM M))) l∪m MultL κ (mapL κ distlawLcM (distlawLcM N)))
+--                                          ≡⟨ refl ⟩
+--                                          (MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x)) l∪m (distlawLcM M))) l∪m MultL κ (mapL κ distlawLcM (distlawLcM N)))
+--                                          ≡⟨ refl ⟩
+--                                          (MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x) ∪ₘ M))) l∪m MultL κ (mapL κ distlawLcM (distlawLcM N)))
+--                                          ≡⟨ lemma-lum κ (unitM (nowL x) ∪ₘ M) N ⟩
+--                                          MultL κ (mapL κ distlawLcM ((distlawLcM (unitM (nowL x) ∪ₘ M)) l∪m distlawLcM N))
+--                                          ≡⟨ refl ⟩
+--                                          MultL κ (mapL κ distlawLcM ((nowL (unitM x) l∪m distlawLcM M) l∪m distlawLcM N))
+--                                          ≡⟨ cong (MultL κ) (cong (mapL κ distlawLcM) (assoc-l∪m (nowL (unitM x)) (distlawLcM M) (distlawLcM N))) ⟩
+--                                          MultL κ (mapL κ distlawLcM (nowL (unitM x) l∪m (distlawLcM M l∪m distlawLcM N))) ∎
+-- lemma-lum κ (unitM (nowL x)) (ass M N O i) = {!!}
+-- lemma-lum κ (unitM (nowL x)) (com M N i) = {!!}
+-- lemma-lum κ (unitM (nowL x)) (unitr M i) = {!!}
+-- lemma-lum κ (unitM (nowL x)) (trunc M N y z i i₁) = {!!}
+-- lemma-lum κ (unitM (stepL x)) N = cong stepL (later-ext λ α → lemma-lum κ (unitM (x α)) N  )
+-- lemma-lum κ (M ∪ₘ M₁) N = {!!}
+
+-- I don't know how to split cases within elimM, so here a lemma for the unitM case of elimM for multlawLcM2, split into nowL and stepL:
+multlawLcM2-unitMcase : {A : Set} {κ : Cl} → ∀(x : (myLift (myLift A κ) κ)) →
+                                     distlawLcM (mapM (MultL κ) (unitM x)) ≡ MultL κ (mapL κ distlawLcM (distlawLcM (unitM x)))
+multlawLcM2-unitMcase (nowL x) = refl
+multlawLcM2-unitMcase (stepL x) = cong stepL (later-ext λ α → multlawLcM2-unitMcase (x α))
+
+-- and here the full proof of the second multiplication law:
+multlawLcM2 : {A : Set} (κ : Cl) → ∀(M : Multiset (myLift (myLift A κ) κ)) →
+                                     distlawLcM (mapM (MultL κ) M) ≡ MultL κ (mapL κ distlawLcM (distlawLcM M))
+multlawLcM2 κ M = elimM
+                   (λ N → ((distlawLcM (mapM (MultL κ) N) ≡ MultL κ (mapL κ distlawLcM (distlawLcM N))) ,
+                          truncLcM (distlawLcM (mapM (MultL κ) N)) (MultL κ (mapL κ distlawLcM (distlawLcM N)))))
+                   refl
+                   (λ x → multlawLcM2-unitMcase x )
+                   (λ {M N} → λ eqM eqN → distlawLcM (mapM (MultL κ) M) l∪m distlawLcM (mapM (MultL κ) N)
+                                           ≡⟨ cong₂ (_l∪m_) eqM eqN ⟩
+                                           (MultL κ (mapL κ distlawLcM (distlawLcM M)) l∪m MultL κ (mapL κ distlawLcM (distlawLcM N)))
+                                           ≡⟨ lemma-multlawLcM2 κ M N ⟩
+                                           MultL κ (mapL κ distlawLcM (distlawLcM M l∪m distlawLcM N)) ∎)
+                   M
+
+
