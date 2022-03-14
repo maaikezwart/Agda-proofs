@@ -6,6 +6,10 @@ open import Cubical.Foundations.Prelude
 open import Cubical.Data.List as List
 open import Cubical.Data.List.Properties
 open import Cubical.Data.Sum using (_⊎_; inl; inr)
+open import Cubical.Data.Unit
+open import Cubical.Data.Empty as ⊥
+open import Cubical.Foundations.HLevels
+open import Cubical.Foundations.Isomorphism
 
 --**********************************************************************--
 --**********************************************************************--
@@ -33,6 +37,48 @@ open import Cubical.Data.Sum using (_⊎_; inl; inr)
 data myLift (A : Set) (κ : Cl) : Set where
  nowL : A → (myLift A κ)
  stepL : ▹ κ (myLift A κ) → (myLift A κ) 
+
+-- if A is a set then (myLift A κ) is a set
+
+module MyLiftSet {A : Set} {κ : Cl} where
+
+  Cover : myLift A κ → myLift A κ → Set
+  Cover (nowL x) (nowL y) = (x ≡ y)
+  Cover (nowL x) (stepL y) = ⊥
+  Cover (stepL x) (nowL y) = ⊥
+  Cover (stepL x) (stepL y) = x ≡ y 
+  
+  isPropCover : isSet A → ∀(x y : (myLift A κ)) → isProp (Cover x y)
+  isPropCover setA (nowL x) (nowL y) eq1 eq2 = setA x y eq1 eq2
+  isPropCover setA (stepL x) (stepL y) eq1 eq2 = {!!}
+  
+  reflCode : ∀ x → Cover x x
+  reflCode (nowL x) = refl
+  reflCode (stepL x) = refl
+
+  encode : ∀(x y : (myLift A κ)) → (p : x ≡ y) → (Cover x y)
+  encode x y = J (λ z → λ p → Cover x z) (reflCode x)
+  
+  encodeRefl : ∀(x : (myLift A κ)) → encode x x refl ≡ reflCode x
+  encodeRefl x = JRefl (λ y _ → Cover x y) (reflCode x)
+
+  decode : ∀(x y : (myLift A κ)) → Cover x y → x ≡ y
+  decode (nowL x) (nowL y) cv = cong nowL cv
+  decode (stepL x) (stepL y) cv = cong stepL cv
+
+  decodeRefl : ∀(x : (myLift A κ)) → decode x x (reflCode x) ≡ refl
+  decodeRefl (nowL x) = refl
+  decodeRefl (stepL x) = refl
+
+  decodeEncode : ∀(x y : (myLift A κ)) → ∀(p : x ≡ y) → decode x y (encode x y p) ≡ p
+  decodeEncode x y = J (λ z p → decode x z (encode x z p) ≡ p) (cong (decode x x) (encodeRefl x) ∙ decodeRefl x)
+
+  isSetmyLift : isSet A → isSet (myLift A κ)
+  isSetmyLift setA x y = isPropRetract
+                           (encode x y)
+                           (decode x y)
+                           (decodeEncode x y)
+                           (isPropCover setA x y)
 
 bindL : {A B : Set} (κ : Cl) → (A → (myLift B κ)) → myLift A κ → myLift B κ
 bindL κ f (nowL a) = f a
