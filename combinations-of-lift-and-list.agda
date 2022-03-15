@@ -46,15 +46,15 @@ module MyLiftSet {A : Set} {κ : Cl} where
   Cover (nowL x) (nowL y) = (x ≡ y)
   Cover (nowL x) (stepL y) = ⊥
   Cover (stepL x) (nowL y) = ⊥
-  Cover (stepL x) (stepL y) = x ≡ y 
-  
+  Cover (stepL x) (stepL y) = ∀ (α : Tick κ) → Cover (x α) (y α) 
+
   isPropCover : isSet A → ∀(x y : (myLift A κ)) → isProp (Cover x y)
   isPropCover setA (nowL x) (nowL y) eq1 eq2 = setA x y eq1 eq2
-  isPropCover setA (stepL x) (stepL y) eq1 eq2 = {!!}
+  isPropCover setA (stepL x) (stepL y) eq1 eq2 = λ i α → isPropCover setA (x α) (y α) (eq1 α) (eq2 α) i
   
   reflCode : ∀ x → Cover x x
   reflCode (nowL x) = refl
-  reflCode (stepL x) = refl
+  reflCode (stepL x) = λ α → reflCode (x α)
 
   encode : ∀(x y : (myLift A κ)) → (p : x ≡ y) → (Cover x y)
   encode x y = J (λ z → λ p → Cover x z) (reflCode x)
@@ -64,11 +64,11 @@ module MyLiftSet {A : Set} {κ : Cl} where
 
   decode : ∀(x y : (myLift A κ)) → Cover x y → x ≡ y
   decode (nowL x) (nowL y) cv = cong nowL cv
-  decode (stepL x) (stepL y) cv = cong stepL cv
+  decode (stepL x) (stepL y) cv = cong stepL (later-ext (λ α → decode (x α) (y α) (cv α)))
 
   decodeRefl : ∀(x : (myLift A κ)) → decode x x (reflCode x) ≡ refl
   decodeRefl (nowL x) = refl
-  decodeRefl (stepL x) = refl
+  decodeRefl (stepL x) = λ i → cong stepL (later-ext (λ α → decodeRefl (x α) i))
 
   decodeEncode : ∀(x y : (myLift A κ)) → ∀(p : x ≡ y) → decode x y (encode x y p) ≡ p
   decodeEncode x y = J (λ z p → decode x z (encode x z p) ≡ p) (cong (decode x x) (encodeRefl x) ∙ decodeRefl x)
