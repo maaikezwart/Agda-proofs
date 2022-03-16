@@ -56,7 +56,7 @@ mapM f (com M N i) = com (mapM f M) (mapM f N) i
 mapM f (unitr M i) = unitr (mapM f M) i
 mapM f (trunc M N x y i i₁) = trunc (mapM f M) (mapM f N) (λ j → mapM f (x j)) (λ j → mapM f (y j)) i i₁
 
--- Bind an multiplication functions for Multiset
+-- Bind and multiplication functions for Multiset
 Multiset-bind : {A B : Set} → (A → Multiset B) → Multiset A → Multiset B
 Multiset-bind f m∅ = m∅
 Multiset-bind f (unitM a) = f a
@@ -214,6 +214,8 @@ equalML = ua equivML
 
 truncML : {A : Set} {κ : Cl} → isSet (MultiLift A κ)
 truncML = subst⁻ isSet (sym equalML) trunc
+
+--IsotoPath as shortcut for this bit of code
 
 --***algebraic structure for MultiLift***--
 
@@ -434,9 +436,12 @@ nowLcM : {A : Set} {κ : Cl} → A → (LcM A κ)
 nowLcM x = nowL (unitM x)
 
 --LcM is a set.
-
 truncLcM : {A : Set} {κ : Cl} → isSet (LcM A κ)
-truncLcM = {!!}
+truncLcM = MyLiftSet.isSetmyLift trunc
+
+--LLCM is a set
+truncLLcM : {A : Set} {κ : Cl} → isSet (myLift (LcM A κ) κ)
+truncLLcM = MyLiftSet.isSetmyLift truncLcM
 
 -- we define a union on LcM, which will help in defining the distributive law.
 _l∪m_ : {A : Set} {κ : Cl} → (LcM A κ) → (LcM A κ) → (LcM A κ)
@@ -444,7 +449,7 @@ nowL x l∪m nowL y = nowL (x ∪ₘ y)
 nowL x l∪m stepL y = stepL (λ α → (nowL x l∪m (y α)))
 stepL x l∪m y = stepL (λ α → ((x α) l∪m y))
 
---l∪m is associative, commutative, and nowL m∅ is a unit for l∪l
+--l∪m is associative, commutative, and nowL m∅ is a unit for l∪m
 assoc-l∪m : {A : Set} {κ : Cl} → ∀(x y z : LcM A κ) → (x l∪m y) l∪m z ≡ x l∪m (y l∪m z)
 assoc-l∪m (nowL x) (nowL y) (nowL z) = cong nowL (sym (ass x y z))
 assoc-l∪m (nowL x) (nowL y) (stepL z) = cong stepL (later-ext λ α → assoc-l∪m (nowL x) (nowL y) (z α))
@@ -474,12 +479,55 @@ unit-l∪m : {A : Set} {κ : Cl} → ∀(x : LcM A κ) → x l∪m (nowL m∅) �
 unit-l∪m (nowL x) = cong nowL (unitr x)
 unit-l∪m (stepL x) = cong stepL (later-ext λ α → unit-l∪m (x α))
 
+lemma-nowL-l∪m-mapL : {A : Set} {κ : Cl} → ∀(x : LcM A κ) → ∀(M : Multiset A) → nowL M l∪m x ≡ mapL κ (M ∪ₘ_) x
+lemma-nowL-l∪m-mapL (nowL x) M = refl
+lemma-nowL-l∪m-mapL (stepL x) M = cong stepL (later-ext (λ α → lemma-nowL-l∪m-mapL (x α) M))
+
 --mapL κ f distributes over l∪m if f distributes over ∪ₘ
 dist-mapL-l∪m : {A B : Set} {κ : Cl} → ∀(f : (Multiset A) → (Multiset B)) → ∀(fdist : ∀(m n : Multiset A) → f (m ∪ₘ n) ≡ f m ∪ₘ f n)
                                      → ∀(x y : (LcM A κ)) → mapL κ f (x l∪m y) ≡ (mapL κ f x) l∪m (mapL κ f y)
 dist-mapL-l∪m f fdist (nowL x) (nowL y) = cong nowL (fdist x y)
 dist-mapL-l∪m f fdist (nowL x) (stepL y) = cong stepL (later-ext λ α → dist-mapL-l∪m f fdist (nowL x) (y α))
 dist-mapL-l∪m f fdist (stepL x) y = cong stepL (later-ext λ α → dist-mapL-l∪m f fdist (x α) y)
+
+-- and why not, I also need a ll∪m:
+_ll∪m_ : {A : Set} {κ : Cl} → (myLift (LcM A κ) κ) → (myLift (LcM A κ) κ) → (myLift (LcM A κ) κ)
+nowL x ll∪m nowL y = nowL (x l∪m y)
+nowL x ll∪m stepL y = stepL (λ α → (nowL x ll∪m (y α)))
+stepL x ll∪m y = stepL (λ α → ((x α) ll∪m y))
+
+assoc-ll∪m : {A : Set} {κ : Cl} → ∀(x y z : (myLift (LcM A κ) κ)) → (x ll∪m y) ll∪m z ≡ x ll∪m (y ll∪m z)
+assoc-ll∪m (nowL x) (nowL y) (nowL z) = cong nowL (assoc-l∪m x y z)
+assoc-ll∪m (nowL x) (nowL y) (stepL z) = cong stepL (later-ext λ α → assoc-ll∪m (nowL x) (nowL y) (z α))
+assoc-ll∪m (nowL x) (stepL y) z = cong stepL (later-ext λ α → assoc-ll∪m (nowL x) (y α) z)
+assoc-ll∪m (stepL x) y z = cong stepL (later-ext λ α → assoc-ll∪m (x α) y z)
+
+unit-ll∪m : {A : Set} {κ : Cl} → ∀(x : myLift (LcM A κ) κ) → nowL (nowL m∅) ll∪m x ≡ x
+unit-ll∪m (nowL x) = nowL (nowL m∅ l∪m x)
+                      ≡⟨ cong nowL (comm-l∪m (nowL m∅) x) ⟩
+                      nowL (x l∪m nowL m∅)
+                      ≡⟨ cong nowL (unit-l∪m x) ⟩
+                      nowL x ∎
+unit-ll∪m (stepL x) = cong stepL (later-ext λ α → unit-ll∪m (x α))
+
+lemma-nowL-ll∪m-mapL : {A : Set} {κ : Cl} → ∀(x : myLift (LcM A κ) κ) → ∀(M : LcM A κ) → nowL M ll∪m x ≡ mapL κ (M l∪m_) x
+lemma-nowL-ll∪m-mapL (nowL x) M = refl
+lemma-nowL-ll∪m-mapL (stepL x) M = cong stepL (later-ext (λ α → lemma-nowL-ll∪m-mapL (x α) M))
+
+multL-ll∪m-l∪m : {A : Set} (κ : Cl) → ∀(x y : myLift (LcM A κ) κ) → MultL κ (x ll∪m y) ≡ MultL κ x l∪m MultL κ y
+multL-ll∪m-l∪m κ (nowL x) (nowL y) = refl
+multL-ll∪m-l∪m κ (nowL x) (stepL y) = stepL (λ α → MultL κ (nowL x ll∪m y α))
+                                          ≡⟨ cong stepL (later-ext(λ α → multL-ll∪m-l∪m κ (nowL x) (y α) )) ⟩
+                                          stepL (λ α → MultL κ (nowL x) l∪m MultL κ (y α))
+                                          ≡⟨ refl ⟩
+                                          stepL (λ α → x l∪m MultL κ (y α))
+                                          ≡⟨ cong stepL (later-ext (λ α → comm-l∪m x (MultL κ (y α)))) ⟩
+                                          (stepL (λ α → MultL κ (y α)) l∪m x)
+                                          ≡⟨ refl ⟩
+                                          (stepL (λ α → MultL κ (y α)) l∪m x)
+                                          ≡⟨ comm-l∪m (stepL (λ α → MultL κ (y α))) x ⟩
+                                          (x l∪m stepL (λ α → MultL κ (y α))) ∎
+multL-ll∪m-l∪m κ (stepL x) y = cong stepL (later-ext (λ α → multL-ll∪m-l∪m κ (x α) y))
 
 -- LcM is a monad via a distributive law, distributing Multiset over Lift.
 -- Here is the distributive law:
@@ -499,7 +547,7 @@ unitlawLcM1 : {A : Set} {κ : Cl} → ∀(x : myLift A κ) → (distlawLcM (unit
 unitlawLcM1 (nowL x) = refl
 unitlawLcM1 (stepL x) = cong stepL (later-ext λ α → unitlawLcM1 (x α))
 
-unitlawLcM2 : {A : Set} {κ : Cl} → ∀(M : Multiset A) → (distlawLcM (mapM nowL M)) ≡ nowL M
+unitlawLcM2 : {A : Set} {κ : Cl} → ∀(M : Multiset A) → (distlawLcM {A}{κ} (mapM nowL M)) ≡ nowL M
 unitlawLcM2 M = elimM
                  (λ N → ((distlawLcM (mapM nowL N) ≡ nowL N) , truncLcM (distlawLcM (mapM nowL N)) (nowL N)))
                  refl
@@ -541,130 +589,79 @@ multlawLcM1 κ M = elimM
                               mapL κ Multiset-mult (distlawLcM (mapM distlawLcM M) l∪m distlawLcM (mapM distlawLcM N)) ∎)
                     M 
 
+-- lemma before we can do the second multiplication law:
 
-lemma-multlawLcM2-unitMcase-unitMcase : {A : Set} (κ : Cl) → ∀(x : (myLift A κ)) → ∀(y : (myLift (myLift A κ) κ)) → 
-                                          (MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x)))) l∪m MultL κ (mapL κ distlawLcM (distlawLcM (unitM y))))
-                                           ≡ MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x)) l∪m distlawLcM (unitM y)))
-lemma-multlawLcM2-unitMcase-unitMcase κ x (nowL y) = refl
-lemma-multlawLcM2-unitMcase-unitMcase κ x (stepL y) = (distlawLcM (unitM x) l∪m
-                                                        stepL (λ α → MultL κ (mapL κ distlawLcM (distlawLcM (unitM (y α))))))
-                                                        ≡⟨ comm-l∪m (distlawLcM (unitM x))
-                                                                    (stepL (λ α → MultL κ (mapL κ distlawLcM (distlawLcM (unitM (y α)))))) ⟩
-                                                        (stepL (λ α → MultL κ (mapL κ distlawLcM (distlawLcM (unitM (y α))))) l∪m
-                                                         distlawLcM (unitM x))
-                                                        ≡⟨ refl ⟩
-                                                        stepL (λ α → (MultL κ (mapL κ distlawLcM (distlawLcM (unitM (y α)))) l∪m
-                                                        distlawLcM (unitM x)))
-                                                        ≡⟨ cong stepL (later-ext λ α → comm-l∪m (MultL κ (mapL κ distlawLcM (distlawLcM (unitM (y α)))))
-                                                                                                (distlawLcM (unitM x)) ) ⟩
-                                                        stepL (λ α → (distlawLcM (unitM x) l∪m
-                                                        (MultL κ (mapL κ distlawLcM (distlawLcM (unitM (y α)))))))
-                                                        ≡⟨ refl ⟩
-                                                        stepL (λ α → (MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x))))) l∪m
-                                                        (MultL κ (mapL κ distlawLcM (distlawLcM (unitM (y α))))))
-                                                        ≡⟨ cong stepL (later-ext λ α → lemma-multlawLcM2-unitMcase-unitMcase κ x (y α)) ⟩
-                                                        stepL (λ α → MultL κ (mapL κ distlawLcM (nowL (unitM x) l∪m distlawLcM (unitM (y α))))) ∎
+-- I don't know hot to split cases within elimM, so here is a lemma for the unitM case of the unitM case for the lemma-llum, split into nowL and stepL:
+lemma-llum-unit-unitcase : {A : Set} (κ : Cl) → ∀(x : myLift A κ) → ∀(y : (myLift (myLift A κ) κ)) →
+                                            (mapL κ distlawLcM (distlawLcM (unitM (nowL x)))) ll∪m (mapL κ distlawLcM (distlawLcM (unitM y)))
+                                             ≡ mapL κ distlawLcM (distlawLcM (unitM (nowL x)) l∪m distlawLcM (unitM y))
+lemma-llum-unit-unitcase κ x (nowL y) = refl
+lemma-llum-unit-unitcase κ x (stepL y) = cong stepL (later-ext λ α → lemma-llum-unit-unitcase κ x (y α))
 
-lemma-multlawLcM2-unitMcase : {A : Set} (κ : Cl) → ∀(x : (myLift (myLift A κ) κ)) → ∀ (N : Multiset (myLift (myLift A κ) κ)) →
-                                 (MultL κ (mapL κ distlawLcM (distlawLcM (unitM x))) l∪m MultL κ (mapL κ distlawLcM (distlawLcM N)))
-                                  ≡ MultL κ (mapL κ distlawLcM (distlawLcM (unitM x) l∪m distlawLcM N))
-lemma-multlawLcM2-unitMcase κ (nowL x) N = elimM
-                                            (λ N → (((MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x)))) l∪m MultL κ (mapL κ distlawLcM (distlawLcM N)))
-                                                   ≡ (MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x)) l∪m distlawLcM N)))) ,
-                                                   truncLcM (MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x)))) l∪m MultL κ (mapL κ distlawLcM (distlawLcM N)))
-                                                            (MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x)) l∪m distlawLcM N)))
-                                                    ))
-                                            refl
-                                            (λ y → lemma-multlawLcM2-unitMcase-unitMcase κ x y)
-                                            (λ {M N} → λ eqM eqN →
-                                               {!MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x)))) l∪m
-                                                MultL κ (mapL κ distlawLcM (distlawLcM M l∪m distlawLcM N))
-                                                ≡⟨ cong (MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x)))) l∪m_)
-                                                        (sym (lemma-lum κ M N)) ⟩
-                                                (MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x)))) l∪m
-                                                (MultL κ (mapL κ distlawLcM (distlawLcM M)) l∪m
-                                                 MultL κ (mapL κ distlawLcM (distlawLcM N))))
-                                                ≡⟨ sym (assoc-l∪m (MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x)))))
-                                                                  (MultL κ (mapL κ distlawLcM (distlawLcM M)))
-                                                                  (MultL κ (mapL κ distlawLcM (distlawLcM N)))) ⟩
-                                                ((MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x)))) l∪m
-                                                  MultL κ (mapL κ distlawLcM (distlawLcM M))) l∪m
-                                                  MultL κ (mapL κ distlawLcM (distlawLcM N)))
-                                                ≡⟨ cong (_l∪m MultL κ (mapL κ distlawLcM (distlawLcM N)))
-                                                        (lemma-lum κ (unitM (nowL x)) M) ⟩
-                                                (MultL κ (mapL κ distlawLcM (nowL (unitM x) l∪m (distlawLcM M))) l∪m
-                                                 MultL κ (mapL κ distlawLcM (distlawLcM N)))
-                                                ≡⟨ refl ⟩
-                                                (MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x)) l∪m (distlawLcM M))) l∪m
-                                                 MultL κ (mapL κ distlawLcM (distlawLcM N)))
-                                                ≡⟨ refl ⟩
-                                                (MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x) ∪ₘ M))) l∪m
-                                                 MultL κ (mapL κ distlawLcM (distlawLcM N)))
-                                                ≡⟨ lemma-lum κ (unitM (nowL x) ∪ₘ M) N ⟩
-                                                MultL κ (mapL κ distlawLcM ((distlawLcM (unitM (nowL x) ∪ₘ M)) l∪m distlawLcM N))
-                                                ≡⟨ refl ⟩
-                                                MultL κ (mapL κ distlawLcM ((nowL (unitM x) l∪m distlawLcM M) l∪m distlawLcM N))
-                                                ≡⟨ cong (MultL κ) (cong (mapL κ distlawLcM)
-                                                                        (assoc-l∪m (nowL (unitM x)) (distlawLcM M) (distlawLcM N))) ⟩
-                                                MultL κ (mapL κ distlawLcM (nowL (unitM x) l∪m (distlawLcM M l∪m distlawLcM N))) ∎!})
-                                            N
-lemma-multlawLcM2-unitMcase κ (stepL x) N = cong stepL (later-ext λ α → lemma-multlawLcM2-unitMcase κ (x α) N)
+-- I don't know how to split cases within elimM, so here a lemma for the unitM case of elimM for lemma-llum, split into nowL and stepL:
+lemma-llum-unitcase : {A : Set} (κ : Cl) →  ∀(x : (myLift (myLift A κ) κ))→ ∀(N : Multiset (myLift (myLift A κ) κ)) →
+                                            (mapL κ distlawLcM (distlawLcM (unitM x))) ll∪m (mapL κ distlawLcM (distlawLcM N))
+                                             ≡ mapL κ distlawLcM (distlawLcM (unitM x) l∪m distlawLcM N)
+lemma-llum-unitcase κ (nowL x) N = elimM
+                                      (λ N → ((mapL κ distlawLcM (distlawLcM (unitM (nowL x)))) ll∪m (mapL κ distlawLcM (distlawLcM N))
+                                             ≡ mapL κ distlawLcM (distlawLcM (unitM (nowL x)) l∪m distlawLcM N)) ,
+                                             truncLLcM ((mapL κ distlawLcM (distlawLcM (unitM (nowL x)))) ll∪m (mapL κ distlawLcM (distlawLcM N)))
+                                                       ( mapL κ distlawLcM (distlawLcM (unitM (nowL x)) l∪m distlawLcM N)))
+                                      refl
+                                      (λ y → lemma-llum-unit-unitcase κ x y) 
+                                      (λ {M N} → λ eqM eqN → (nowL (distlawLcM (unitM x)) ll∪m mapL κ distlawLcM (distlawLcM M l∪m distlawLcM N))
+                                                              ≡⟨ lemma-nowL-ll∪m-mapL (mapL κ distlawLcM (distlawLcM M l∪m distlawLcM N)) (distlawLcM (unitM x)) ⟩
+                                                              mapL κ (distlawLcM (unitM x) l∪m_) (mapL κ distlawLcM (distlawLcM M l∪m distlawLcM N))
+                                                              ≡⟨ mapmapL κ distlawLcM (distlawLcM (unitM x) l∪m_) (distlawLcM M l∪m distlawLcM N) ⟩
+                                                              mapL κ (λ y → distlawLcM (unitM x) l∪m distlawLcM y) (distlawLcM M l∪m distlawLcM N) 
+                                                              ≡⟨ refl ⟩
+                                                              mapL κ (λ y → distlawLcM ((unitM x) ∪ₘ y)) (distlawLcM M l∪m distlawLcM N)
+                                                              ≡⟨ sym (mapmapL κ (unitM x ∪ₘ_) distlawLcM (distlawLcM M l∪m distlawLcM N)) ⟩
+                                                              mapL κ distlawLcM (mapL κ ((unitM x) ∪ₘ_) (distlawLcM M l∪m distlawLcM N))
+                                                              ≡⟨ cong (mapL κ distlawLcM) (sym (lemma-nowL-l∪m-mapL (distlawLcM M l∪m distlawLcM N) (unitM x))) ⟩
+                                                              mapL κ distlawLcM (nowL (unitM x) l∪m (distlawLcM M l∪m distlawLcM N)) ∎)
+                                      N
+lemma-llum-unitcase κ (stepL x) N = cong stepL (later-ext (λ α → lemma-llum-unitcase κ (x α) N))
 
-lemma-multlawLcM2 : {A : Set} (κ : Cl) → ∀(M N : Multiset (myLift (myLift A κ) κ)) →
-                                 (MultL κ (mapL κ distlawLcM (distlawLcM M)) l∪m MultL κ (mapL κ distlawLcM (distlawLcM N)))
-                                  ≡ MultL κ (mapL κ distlawLcM (distlawLcM M l∪m distlawLcM N))
 
-lemma-multlawLcM2 κ M N = elimM
-                          (λ M → ((MultL κ (mapL κ distlawLcM (distlawLcM M)) l∪m MultL κ (mapL κ distlawLcM (distlawLcM N)))
-                                  ≡ MultL κ (mapL κ distlawLcM (distlawLcM M l∪m distlawLcM N))) ,
-                                  truncLcM (MultL κ (mapL κ distlawLcM (distlawLcM M)) l∪m MultL κ (mapL κ distlawLcM (distlawLcM N)))
-                                            (MultL κ (mapL κ distlawLcM (distlawLcM M l∪m distlawLcM N)))  )
-                          (nowL m∅ l∪m MultL κ (mapL κ distlawLcM (distlawLcM N))
-                             ≡⟨ comm-l∪m (nowL m∅) (MultL κ (mapL κ distlawLcM (distlawLcM N))) ⟩
-                             (MultL κ (mapL κ distlawLcM (distlawLcM N)) l∪m nowL m∅)
-                             ≡⟨ unit-l∪m (MultL κ (mapL κ distlawLcM (distlawLcM N))) ⟩
-                             MultL κ (mapL κ distlawLcM (distlawLcM N))
-                             ≡⟨ cong (MultL κ) (cong (mapL κ distlawLcM) (sym (unit-l∪m (distlawLcM N)))) ⟩
-                             MultL κ (mapL κ distlawLcM (distlawLcM N l∪m nowL m∅ ))
-                             ≡⟨ cong (MultL κ) (cong (mapL κ distlawLcM) (comm-l∪m (distlawLcM N) (nowL m∅))) ⟩
-                             MultL κ (mapL κ distlawLcM (nowL m∅ l∪m distlawLcM N)) ∎ )
-                          (λ x → lemma-multlawLcM2-unitMcase κ x N )
-                          {!!}
-                          M
+lemma-llum' : {A : Set} (κ : Cl) → ∀(M N : Multiset (myLift (myLift A κ) κ)) → (mapL κ distlawLcM (distlawLcM M)) ll∪m (mapL κ distlawLcM (distlawLcM N))
+                                                                               ≡ mapL κ distlawLcM (distlawLcM M l∪m distlawLcM N)
 
--- lemma-lum κ (unitM (nowL x)) (M ∪ₘ N) = MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x)))) l∪m MultL κ (mapL κ distlawLcM (distlawLcM M l∪m distlawLcM N))
---                                          ≡⟨ cong (MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x)))) l∪m_) (sym (lemma-lum κ M N)) ⟩
---                                          (MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x)))) l∪m
---                                          (MultL κ (mapL κ distlawLcM (distlawLcM M)) l∪m
---                                           MultL κ (mapL κ distlawLcM (distlawLcM N))))
---                                          ≡⟨ sym (assoc-l∪m (MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x)))))
---                                                            (MultL κ (mapL κ distlawLcM (distlawLcM M)))
---                                                            (MultL κ (mapL κ distlawLcM (distlawLcM N)))) ⟩
---                                          ((MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x)))) l∪m
---                                            MultL κ (mapL κ distlawLcM (distlawLcM M))) l∪m
---                                           MultL κ (mapL κ distlawLcM (distlawLcM N)))
---                                          ≡⟨ cong (_l∪m MultL κ (mapL κ distlawLcM (distlawLcM N))) (lemma-lum κ (unitM (nowL x)) M) ⟩
---                                          (MultL κ (mapL κ distlawLcM (nowL (unitM x) l∪m (distlawLcM M))) l∪m MultL κ (mapL κ distlawLcM (distlawLcM N)))
---                                          ≡⟨ refl ⟩
---                                          (MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x)) l∪m (distlawLcM M))) l∪m MultL κ (mapL κ distlawLcM (distlawLcM N)))
---                                          ≡⟨ refl ⟩
---                                          (MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x) ∪ₘ M))) l∪m MultL κ (mapL κ distlawLcM (distlawLcM N)))
---                                          ≡⟨ lemma-lum κ (unitM (nowL x) ∪ₘ M) N ⟩
---                                          MultL κ (mapL κ distlawLcM ((distlawLcM (unitM (nowL x) ∪ₘ M)) l∪m distlawLcM N))
---                                          ≡⟨ refl ⟩
---                                          MultL κ (mapL κ distlawLcM ((nowL (unitM x) l∪m distlawLcM M) l∪m distlawLcM N))
---                                          ≡⟨ cong (MultL κ) (cong (mapL κ distlawLcM) (assoc-l∪m (nowL (unitM x)) (distlawLcM M) (distlawLcM N))) ⟩
---                                          MultL κ (mapL κ distlawLcM (nowL (unitM x) l∪m (distlawLcM M l∪m distlawLcM N))) ∎
--- lemma-lum κ (unitM (nowL x)) (ass M N O i) = {!!}
--- lemma-lum κ (unitM (nowL x)) (com M N i) = {!!}
--- lemma-lum κ (unitM (nowL x)) (unitr M i) = {!!}
--- lemma-lum κ (unitM (nowL x)) (trunc M N y z i i₁) = {!!}
--- lemma-lum κ (unitM (stepL x)) N = cong stepL (later-ext λ α → lemma-lum κ (unitM (x α)) N  )
--- lemma-lum κ (M ∪ₘ M₁) N = {!!}
+lemma-llum' κ M = elimM
+                    (λ M₁ → (( ∀ N → (mapL κ distlawLcM (distlawLcM M₁)) ll∪m (mapL κ distlawLcM (distlawLcM N)) ≡ mapL κ distlawLcM (distlawLcM M₁ l∪m distlawLcM N)) ,
+                     λ x y i N → truncLLcM ((mapL κ distlawLcM (distlawLcM M₁)) ll∪m (mapL κ distlawLcM (distlawLcM N)))
+                                            (mapL κ distlawLcM (distlawLcM M₁ l∪m distlawLcM N))
+                                            (x N)
+                                            (y N)
+                                            i))
+                    (λ N → ((nowL (nowL m∅) ll∪m mapL κ distlawLcM (distlawLcM N))
+                      ≡⟨ unit-ll∪m (mapL κ distlawLcM (distlawLcM N)) ⟩
+                      (mapL κ distlawLcM (distlawLcM N))
+                      ≡⟨ cong (mapL κ distlawLcM) (sym (unit-l∪m (distlawLcM N))) ⟩
+                      mapL κ distlawLcM (distlawLcM N l∪m nowL m∅)
+                      ≡⟨ cong (mapL κ distlawLcM) (comm-l∪m (distlawLcM N) (nowL m∅)) ⟩
+                      mapL κ distlawLcM (nowL m∅ l∪m distlawLcM N) ∎))
+                    (λ x → λ N → lemma-llum-unitcase κ x N)
+                    (λ {M M₁} → λ eqM eqM₁ → λ N → (mapL κ distlawLcM (distlawLcM M l∪m distlawLcM M₁) ll∪m mapL κ distlawLcM (distlawLcM N))
+                                             ≡⟨ cong (_ll∪m mapL κ distlawLcM (distlawLcM N)) (sym (eqM M₁)) ⟩
+                                             (((mapL κ distlawLcM (distlawLcM M)) ll∪m (mapL κ distlawLcM (distlawLcM M₁))) ll∪m mapL κ distlawLcM (distlawLcM N))
+                                             ≡⟨ assoc-ll∪m ((mapL κ distlawLcM (distlawLcM M))) ((mapL κ distlawLcM (distlawLcM M₁))) ((mapL κ distlawLcM (distlawLcM N))) ⟩
+                                             ((mapL κ distlawLcM (distlawLcM M)) ll∪m ((mapL κ distlawLcM (distlawLcM M₁)) ll∪m mapL κ distlawLcM (distlawLcM N)))
+                                             ≡⟨ cong (mapL κ distlawLcM (distlawLcM M) ll∪m_) (eqM₁ N) ⟩
+                                             ((mapL κ distlawLcM (distlawLcM M) ll∪m mapL κ distlawLcM (distlawLcM M₁ l∪m distlawLcM N)))
+                                             ≡⟨ refl ⟩
+                                             (mapL κ distlawLcM (distlawLcM M) ll∪m mapL κ distlawLcM (distlawLcM (M₁ ∪ₘ N)))
+                                             ≡⟨ eqM (M₁ ∪ₘ N) ⟩
+                                             mapL κ distlawLcM (distlawLcM M l∪m (distlawLcM M₁ l∪m distlawLcM N))
+                                             ≡⟨ cong (mapL κ distlawLcM) (sym (assoc-l∪m (distlawLcM M) (distlawLcM M₁) (distlawLcM N))) ⟩
+                                             mapL κ distlawLcM ((distlawLcM M l∪m distlawLcM M₁) l∪m distlawLcM N) ∎)
+                    M
+
+-- then now the second multiplication law:
 
 -- I don't know how to split cases within elimM, so here a lemma for the unitM case of elimM for multlawLcM2, split into nowL and stepL:
 multlawLcM2-unitMcase : {A : Set} {κ : Cl} → ∀(x : (myLift (myLift A κ) κ)) →
-                                     distlawLcM (mapM (MultL κ) (unitM x)) ≡ MultL κ (mapL κ distlawLcM (distlawLcM (unitM x)))
+                                      distlawLcM (mapM (MultL κ) (unitM x)) ≡ MultL κ (mapL κ distlawLcM (distlawLcM (unitM x)))
 multlawLcM2-unitMcase (nowL x) = refl
 multlawLcM2-unitMcase (stepL x) = cong stepL (later-ext λ α → multlawLcM2-unitMcase (x α))
 
@@ -679,8 +676,286 @@ multlawLcM2 κ M = elimM
                    (λ {M N} → λ eqM eqN → distlawLcM (mapM (MultL κ) M) l∪m distlawLcM (mapM (MultL κ) N)
                                            ≡⟨ cong₂ (_l∪m_) eqM eqN ⟩
                                            (MultL κ (mapL κ distlawLcM (distlawLcM M)) l∪m MultL κ (mapL κ distlawLcM (distlawLcM N)))
-                                           ≡⟨ lemma-multlawLcM2 κ M N ⟩
+                                           ≡⟨ sym (multL-ll∪m-l∪m κ (mapL κ distlawLcM (distlawLcM M)) (mapL κ distlawLcM (distlawLcM N))) ⟩
+                                           MultL κ ((mapL κ distlawLcM (distlawLcM M)) ll∪m (mapL κ distlawLcM (distlawLcM N)))
+                                           ≡⟨ cong (MultL κ) (lemma-llum' κ M N) ⟩
                                            MultL κ (mapL κ distlawLcM (distlawLcM M l∪m distlawLcM N)) ∎)
                    M
+
+
+--some random proofs that did not work, or work partially, that I'm not ready to through away yet:
+
+-- lemma-llum : {A : Set} (κ : Cl) → ∀(M N : Multiset (myLift (myLift A κ) κ)) → (mapL κ distlawLcM (distlawLcM M)) ll∪m (mapL κ distlawLcM (distlawLcM N))
+--                                                                                ≡ mapL κ distlawLcM (distlawLcM M l∪m distlawLcM N)
+-- lemma-llum κ m∅ N = (nowL (nowL m∅) ll∪m mapL κ distlawLcM (distlawLcM N))
+--                        ≡⟨ unit-ll∪m (mapL κ distlawLcM (distlawLcM N)) ⟩
+--                        (mapL κ distlawLcM (distlawLcM N))
+--                        ≡⟨ cong (mapL κ distlawLcM) (sym (unit-l∪m (distlawLcM N))) ⟩
+--                        mapL κ distlawLcM (distlawLcM N l∪m nowL m∅)
+--                        ≡⟨ cong (mapL κ distlawLcM) (comm-l∪m (distlawLcM N) (nowL m∅)) ⟩
+--                        mapL κ distlawLcM (nowL m∅ l∪m distlawLcM N) ∎
+-- lemma-llum κ (unitM (nowL x)) m∅ = refl
+-- lemma-llum κ (unitM (nowL x)) (unitM (nowL y)) = refl
+-- lemma-llum κ (unitM (nowL x)) (unitM (stepL y)) = cong stepL (later-ext (λ α → lemma-llum κ (unitM (nowL x)) (unitM (y α))))
+-- lemma-llum κ (unitM (nowL x)) (M ∪ₘ N) = (nowL (distlawLcM (unitM x)) ll∪m
+--                                            mapL κ distlawLcM (distlawLcM M l∪m distlawLcM N))
+--                                            ≡⟨ lemma-nowL-ll∪m-mapL (mapL κ distlawLcM (distlawLcM M l∪m distlawLcM N)) (distlawLcM (unitM x)) ⟩
+--                                            mapL κ (distlawLcM (unitM x) l∪m_) (mapL κ distlawLcM (distlawLcM M l∪m distlawLcM N))
+--                                            ≡⟨ mapmapL κ distlawLcM (distlawLcM (unitM x) l∪m_) ((distlawLcM M l∪m distlawLcM N)) ⟩
+--                                            mapL κ (λ y → distlawLcM (unitM x) l∪m (distlawLcM y)) (distlawLcM M l∪m distlawLcM N)
+--                                            ≡⟨ cong₂ (mapL κ) (funExt (λ y → refl)) refl ⟩
+--                                            mapL κ (λ y → distlawLcM ((unitM x) ∪ₘ y)) (distlawLcM M l∪m distlawLcM N)
+--                                            ≡⟨ sym (mapmapL κ ((unitM x) ∪ₘ_) distlawLcM (distlawLcM M l∪m distlawLcM N)) ⟩
+--                                            mapL κ distlawLcM (mapL κ ((unitM x) ∪ₘ_) (distlawLcM M l∪m distlawLcM N))
+--                                            ≡⟨ cong (mapL κ distlawLcM) (sym (lemma-nowL-l∪m-mapL (distlawLcM M l∪m distlawLcM N) (unitM x))) ⟩                 
+--                                            mapL κ distlawLcM (nowL (unitM x) l∪m (distlawLcM M l∪m distlawLcM N)) ∎
+-- lemma-llum κ (unitM (nowL x)) (ass N N₁ N₂ i) = {!!}
+-- lemma-llum κ (unitM (nowL x)) (com N N₁ i) = {!!}
+-- lemma-llum κ (unitM (nowL x)) (unitr N i) = {!!}
+-- lemma-llum κ (unitM (nowL x)) (trunc N N₁ x₁ y i i₁) = {!!}
+-- lemma-llum κ (unitM (stepL x)) N = cong stepL (later-ext (λ α → lemma-llum κ (unitM (x α)) N))
+-- lemma-llum κ  (M ∪ₘ M₁) N = (mapL κ distlawLcM (distlawLcM M l∪m distlawLcM M₁) ll∪m mapL κ distlawLcM (distlawLcM N))
+--                              ≡⟨ cong (_ll∪m mapL κ distlawLcM (distlawLcM N)) (sym (lemma-llum κ M M₁)) ⟩
+--                              (((mapL κ distlawLcM (distlawLcM M)) ll∪m (mapL κ distlawLcM (distlawLcM M₁))) ll∪m mapL κ distlawLcM (distlawLcM N))
+--                              ≡⟨ assoc-ll∪m ((mapL κ distlawLcM (distlawLcM M))) ((mapL κ distlawLcM (distlawLcM M₁))) ((mapL κ distlawLcM (distlawLcM N))) ⟩
+--                              ((mapL κ distlawLcM (distlawLcM M)) ll∪m ((mapL κ distlawLcM (distlawLcM M₁)) ll∪m mapL κ distlawLcM (distlawLcM N)))
+--                              ≡⟨ cong (mapL κ distlawLcM (distlawLcM M) ll∪m_) (lemma-llum κ M₁ N) ⟩
+--                              ((mapL κ distlawLcM (distlawLcM M) ll∪m mapL κ distlawLcM (distlawLcM M₁ l∪m distlawLcM N)))
+--                              ≡⟨ refl ⟩
+--                              (mapL κ distlawLcM (distlawLcM M) ll∪m mapL κ distlawLcM (distlawLcM (M₁ ∪ₘ N)))
+--                              ≡⟨ lemma-llum κ M (M₁ ∪ₘ N) ⟩
+--                              mapL κ distlawLcM (distlawLcM M l∪m (distlawLcM M₁ l∪m distlawLcM N))
+--                              ≡⟨ cong (mapL κ distlawLcM) (sym (assoc-l∪m (distlawLcM M) (distlawLcM M₁) (distlawLcM N))) ⟩
+--                              mapL κ distlawLcM ((distlawLcM M l∪m distlawLcM M₁) l∪m distlawLcM N) ∎
+-- lemma-llum κ  (ass M M₁ M₂ i) N = {!!}
+-- lemma-llum κ  (com M M₁ i) N = {!!}
+-- lemma-llum κ  (unitr M i) N = {!!}
+-- lemma-llum κ  (trunc M M₁ x y i i₁) N = {!!}
+
+
+
+-- -- lemma-multlawLcM2-unitMcase-unitMcase : {A : Set} (κ : Cl) → ∀(x : (myLift A κ)) → ∀(y : (myLift (myLift A κ) κ)) → 
+-- --                                           (MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x)))) l∪m MultL κ (mapL κ distlawLcM (distlawLcM (unitM y))))
+-- --                                            ≡ MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x)) l∪m distlawLcM (unitM y)))
+-- -- lemma-multlawLcM2-unitMcase-unitMcase κ x (nowL y) = refl
+-- -- lemma-multlawLcM2-unitMcase-unitMcase κ x (stepL y) = (distlawLcM (unitM x) l∪m
+-- --                                                         stepL (λ α → MultL κ (mapL κ distlawLcM (distlawLcM (unitM (y α))))))
+-- --                                                         ≡⟨ comm-l∪m (distlawLcM (unitM x))
+-- --                                                                     (stepL (λ α → MultL κ (mapL κ distlawLcM (distlawLcM (unitM (y α)))))) ⟩
+-- --                                                         (stepL (λ α → MultL κ (mapL κ distlawLcM (distlawLcM (unitM (y α))))) l∪m
+-- --                                                          distlawLcM (unitM x))
+-- --                                                         ≡⟨ refl ⟩
+-- --                                                         stepL (λ α → (MultL κ (mapL κ distlawLcM (distlawLcM (unitM (y α)))) l∪m
+-- --                                                         distlawLcM (unitM x)))
+-- --                                                         ≡⟨ cong stepL (later-ext λ α → comm-l∪m (MultL κ (mapL κ distlawLcM (distlawLcM (unitM (y α)))))
+-- --                                                                                                 (distlawLcM (unitM x)) ) ⟩
+-- --                                                         stepL (λ α → (distlawLcM (unitM x) l∪m
+-- --                                                         (MultL κ (mapL κ distlawLcM (distlawLcM (unitM (y α)))))))
+-- --                                                         ≡⟨ refl ⟩
+-- --                                                         stepL (λ α → (MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x))))) l∪m
+-- --                                                         (MultL κ (mapL κ distlawLcM (distlawLcM (unitM (y α))))))
+-- --                                                         ≡⟨ cong stepL (later-ext λ α → lemma-multlawLcM2-unitMcase-unitMcase κ x (y α)) ⟩
+-- --                                                         stepL (λ α → MultL κ (mapL κ distlawLcM (nowL (unitM x) l∪m distlawLcM (unitM (y α))))) ∎
+
+-- -- lemma-multlawLcM2-unitMcase : {A : Set} (κ : Cl) → ∀(x : (myLift (myLift A κ) κ)) → ∀ (N : Multiset (myLift (myLift A κ) κ)) →
+-- --                                  (MultL κ (mapL κ distlawLcM (distlawLcM (unitM x))) l∪m MultL κ (mapL κ distlawLcM (distlawLcM N)))
+-- --                                   ≡ MultL κ (mapL κ distlawLcM (distlawLcM (unitM x) l∪m distlawLcM N))
+
+-- -- lemma-multlawLcM2 : {A : Set} (κ : Cl) → ∀(M N : Multiset (myLift (myLift A κ) κ)) →
+-- --                                  (MultL κ (mapL κ distlawLcM (distlawLcM M)) l∪m MultL κ (mapL κ distlawLcM (distlawLcM N)))
+-- --                                   ≡ MultL κ (mapL κ distlawLcM (distlawLcM M l∪m distlawLcM N))
+
+-- -- lemma-multlawLcM2-unitMcase κ (nowL x) N = elimM
+-- --                                             (λ N → (((MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x)))) l∪m MultL κ (mapL κ distlawLcM (distlawLcM N)))
+-- --                                                    ≡ (MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x)) l∪m distlawLcM N)))) ,
+-- --                                                    truncLcM (MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x)))) l∪m MultL κ (mapL κ distlawLcM (distlawLcM N)))
+-- --                                                             (MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x)) l∪m distlawLcM N)))
+-- --                                                     ))
+-- --                                             refl
+-- --                                             (λ y → lemma-multlawLcM2-unitMcase-unitMcase κ x y)
+-- --                                             (λ {M N} → λ eqM eqN → 
+-- --                                                        MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x)))) l∪m
+-- --                                                        MultL κ (mapL κ distlawLcM (distlawLcM M l∪m distlawLcM N))
+-- --                                                        ≡⟨ cong (MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x)))) l∪m_)
+-- --                                                                         (sym (lemma-multlawLcM2 κ M N)) ⟩
+-- --                                                        (MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x)))) l∪m
+-- --                                                        (MultL κ (mapL κ distlawLcM (distlawLcM M)) l∪m
+-- --                                                         MultL κ (mapL κ distlawLcM (distlawLcM N))))
+-- --                                                        ≡⟨ sym (assoc-l∪m (MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x)))))
+-- --                                                                          (MultL κ (mapL κ distlawLcM (distlawLcM M)))
+-- --                                                                          (MultL κ (mapL κ distlawLcM (distlawLcM N)))) ⟩
+-- --                                                        ((MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x)))) l∪m
+-- --                                                          MultL κ (mapL κ distlawLcM (distlawLcM M))) l∪m
+-- --                                                          MultL κ (mapL κ distlawLcM (distlawLcM N)))
+-- --                                                        ≡⟨ cong (_l∪m MultL κ (mapL κ distlawLcM (distlawLcM N)))
+-- --                                                         (lemma-multlawLcM2-unitMcase κ (nowL x) M) ⟩
+-- --                                                        (MultL κ (mapL κ distlawLcM (nowL (unitM x) l∪m (distlawLcM M))) l∪m
+-- --                                                         MultL κ (mapL κ distlawLcM (distlawLcM N)))
+-- --                                                        ≡⟨ refl ⟩
+-- --                                                        (MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x)) l∪m (distlawLcM M))) l∪m
+-- --                                                         MultL κ (mapL κ distlawLcM (distlawLcM N)))
+-- --                                                        ≡⟨ refl ⟩
+-- --                                                        (MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x) ∪ₘ M))) l∪m
+-- --                                                         MultL κ (mapL κ distlawLcM (distlawLcM N)))
+-- --                                                        ≡⟨ lemma-multlawLcM2 κ (unitM (nowL x) ∪ₘ M) N ⟩
+-- --                                                        MultL κ (mapL κ distlawLcM ((distlawLcM (unitM (nowL x) ∪ₘ M)) l∪m distlawLcM N))
+-- --                                                        ≡⟨ refl ⟩
+-- --                                                        MultL κ (mapL κ distlawLcM ((nowL (unitM x) l∪m distlawLcM M) l∪m distlawLcM N))
+-- --                                                        ≡⟨ cong (MultL κ) (cong (mapL κ distlawLcM)
+-- --                                                                                (assoc-l∪m (nowL (unitM x)) (distlawLcM M) (distlawLcM N))) ⟩
+-- --                                                        MultL κ (mapL κ distlawLcM (nowL (unitM x) l∪m (distlawLcM M l∪m distlawLcM N))) ∎)
+-- --                                             N
+                                         
+-- -- lemma-multlawLcM2-unitMcase κ (stepL x) N = cong stepL (later-ext λ α → lemma-multlawLcM2-unitMcase κ (x α) N)
+
+
+-- -- lemma-multlawLcM2 κ M N = elimM
+-- --                           (λ M → ((MultL κ (mapL κ distlawLcM (distlawLcM M)) l∪m MultL κ (mapL κ distlawLcM (distlawLcM N)))
+-- --                                   ≡ MultL κ (mapL κ distlawLcM (distlawLcM M l∪m distlawLcM N))) ,
+-- --                                   truncLcM (MultL κ (mapL κ distlawLcM (distlawLcM M)) l∪m MultL κ (mapL κ distlawLcM (distlawLcM N)))
+-- --                                             (MultL κ (mapL κ distlawLcM (distlawLcM M l∪m distlawLcM N)))  )
+-- --                           (nowL m∅ l∪m MultL κ (mapL κ distlawLcM (distlawLcM N))
+-- --                              ≡⟨ comm-l∪m (nowL m∅) (MultL κ (mapL κ distlawLcM (distlawLcM N))) ⟩
+-- --                              (MultL κ (mapL κ distlawLcM (distlawLcM N)) l∪m nowL m∅)
+-- --                              ≡⟨ unit-l∪m (MultL κ (mapL κ distlawLcM (distlawLcM N))) ⟩
+-- --                              MultL κ (mapL κ distlawLcM (distlawLcM N))
+-- --                              ≡⟨ cong (MultL κ) (cong (mapL κ distlawLcM) (sym (unit-l∪m (distlawLcM N)))) ⟩
+-- --                              MultL κ (mapL κ distlawLcM (distlawLcM N l∪m nowL m∅ ))
+-- --                              ≡⟨ cong (MultL κ) (cong (mapL κ distlawLcM) (comm-l∪m (distlawLcM N) (nowL m∅))) ⟩
+-- --                              MultL κ (mapL κ distlawLcM (nowL m∅ l∪m distlawLcM N)) ∎ )
+-- --                           (λ x → lemma-multlawLcM2-unitMcase κ x N )
+-- --                           (λ {M₁ M₂} → λ eq1 eq2 → MultL κ (mapL κ distlawLcM (distlawLcM M₁ l∪m distlawLcM M₂)) l∪m
+-- --                                                     MultL κ (mapL κ distlawLcM (distlawLcM N))
+-- --                                                     ≡⟨ cong (_l∪m MultL κ (mapL κ distlawLcM (distlawLcM N))) (sym (lemma-multlawLcM2 κ M₁ M₂)) ⟩
+-- --                                                     ((MultL κ (mapL κ distlawLcM (distlawLcM M₁))l∪m MultL κ (mapL κ distlawLcM (distlawLcM M₂))) l∪m
+-- --                                                     MultL κ (mapL κ distlawLcM (distlawLcM N)))
+-- --                                                     ≡⟨ assoc-l∪m (MultL κ (mapL κ distlawLcM (distlawLcM M₁)))
+-- --                                                                  (MultL κ (mapL κ distlawLcM (distlawLcM M₂)))
+-- --                                                                  (MultL κ (mapL κ distlawLcM (distlawLcM N))) ⟩
+-- --                                                     (MultL κ (mapL κ distlawLcM (distlawLcM M₁))l∪m (MultL κ (mapL κ distlawLcM (distlawLcM M₂)) l∪m
+-- --                                                     MultL κ (mapL κ distlawLcM (distlawLcM N))))
+-- --                                                     ≡⟨ cong (MultL κ (mapL κ distlawLcM (distlawLcM M₁)) l∪m_) (lemma-multlawLcM2 κ M₂ N) ⟩ 
+-- --                                                     (MultL κ (mapL κ distlawLcM (distlawLcM M₁)) l∪m  MultL κ (mapL κ distlawLcM (distlawLcM M₂ l∪m distlawLcM N)) )
+-- --                                                     ≡⟨ cong (MultL κ (mapL κ distlawLcM (distlawLcM M₁)) l∪m_) refl ⟩
+-- --                                                     (MultL κ (mapL κ distlawLcM (distlawLcM M₁)) l∪m  MultL κ (mapL κ distlawLcM (distlawLcM (M₂ ∪ₘ N))) )
+-- --                                                     ≡⟨ lemma-multlawLcM2 κ M₁ ((M₂ ∪ₘ N)) ⟩
+-- --                                                     MultL κ (mapL κ distlawLcM (distlawLcM M₁ l∪m (distlawLcM M₂ l∪m distlawLcM N)))
+-- --                                                     ≡⟨ cong (MultL κ) (cong (mapL κ distlawLcM) (sym (assoc-l∪m (distlawLcM M₁) (distlawLcM M₂) (distlawLcM N)))) ⟩
+-- --                                                     MultL κ (mapL κ distlawLcM ((distlawLcM M₁ l∪m distlawLcM M₂) l∪m distlawLcM N)) ∎)
+-- --                           M
+-- -- 
+
+-- lemma-lum : {A : Set} (κ : Cl) → ∀(M N : Multiset (myLift (myLift A κ) κ)) →
+--                                  (MultL κ (mapL κ distlawLcM (distlawLcM M)) l∪m MultL κ (mapL κ distlawLcM (distlawLcM N)))
+--                                   ≡ MultL κ (mapL κ distlawLcM (distlawLcM M l∪m distlawLcM N))
+-- lemma-lum κ m∅ N = nowL m∅ l∪m MultL κ (mapL κ distlawLcM (distlawLcM N))
+--                     ≡⟨ comm-l∪m (nowL m∅) (MultL κ (mapL κ distlawLcM (distlawLcM N))) ⟩
+--                     (MultL κ (mapL κ distlawLcM (distlawLcM N)) l∪m nowL m∅)
+--                     ≡⟨ unit-l∪m (MultL κ (mapL κ distlawLcM (distlawLcM N))) ⟩
+--                     MultL κ (mapL κ distlawLcM (distlawLcM N))
+--                     ≡⟨ cong (MultL κ) (cong (mapL κ distlawLcM) (sym (unit-l∪m (distlawLcM N)))) ⟩
+--                     MultL κ (mapL κ distlawLcM (distlawLcM N l∪m nowL m∅ ))
+--                     ≡⟨ cong (MultL κ) (cong (mapL κ distlawLcM) (comm-l∪m (distlawLcM N) (nowL m∅))) ⟩
+--                     MultL κ (mapL κ distlawLcM (nowL m∅ l∪m distlawLcM N)) ∎
+-- lemma-lum κ (unitM (nowL x)) m∅ = refl
+-- lemma-lum κ (unitM (nowL x)) (unitM (nowL y)) = refl
+-- lemma-lum κ (unitM (nowL x)) (unitM (stepL y)) = (distlawLcM (unitM x) l∪m
+--                                                   stepL (λ α → MultL κ (mapL κ distlawLcM (distlawLcM (unitM (y α))))))
+--                                                   ≡⟨ comm-l∪m (distlawLcM (unitM x))
+--                                                               (stepL (λ α → MultL κ (mapL κ distlawLcM (distlawLcM (unitM (y α)))))) ⟩
+--                                                   (stepL (λ α → MultL κ (mapL κ distlawLcM (distlawLcM (unitM (y α))))) l∪m
+--                                                    distlawLcM (unitM x))
+--                                                   ≡⟨ refl ⟩
+--                                                   stepL (λ α → (MultL κ (mapL κ distlawLcM (distlawLcM (unitM (y α)))) l∪m
+--                                                    distlawLcM (unitM x)))
+--                                                   ≡⟨ cong stepL (later-ext λ α → comm-l∪m (MultL κ (mapL κ distlawLcM (distlawLcM (unitM (y α)))))
+--                                                                                           (distlawLcM (unitM x)) ) ⟩
+--                                                   stepL (λ α → (distlawLcM (unitM x) l∪m
+--                                                   (MultL κ (mapL κ distlawLcM (distlawLcM (unitM (y α)))))))
+--                                                   ≡⟨ refl ⟩
+--                                                   stepL (λ α → (MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x))))) l∪m
+--                                                   (MultL κ (mapL κ distlawLcM (distlawLcM (unitM (y α))))))
+--                                                   ≡⟨ cong stepL (later-ext λ α → lemma-lum κ (unitM (nowL x)) (unitM (y α))) ⟩
+--                                                   stepL (λ α → MultL κ (mapL κ distlawLcM (nowL (unitM x) l∪m distlawLcM (unitM (y α))))) ∎
+-- lemma-lum κ (unitM (nowL x)) (M ∪ₘ N) = MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x)))) l∪m
+--                                                 MultL κ (mapL κ distlawLcM (distlawLcM M l∪m distlawLcM N))
+--                                                 ≡⟨ cong (MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x)))) l∪m_)
+--                                                         (sym (lemma-lum κ M N)) ⟩
+--                                                 (MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x)))) l∪m
+--                                                 (MultL κ (mapL κ distlawLcM (distlawLcM M)) l∪m
+--                                                  MultL κ (mapL κ distlawLcM (distlawLcM N))))
+--                                                 ≡⟨ sym (assoc-l∪m (MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x)))))
+--                                                                   (MultL κ (mapL κ distlawLcM (distlawLcM M)))
+--                                                                   (MultL κ (mapL κ distlawLcM (distlawLcM N)))) ⟩
+--                                                 ((MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x)))) l∪m
+--                                                   MultL κ (mapL κ distlawLcM (distlawLcM M))) l∪m
+--                                                   MultL κ (mapL κ distlawLcM (distlawLcM N)))
+--                                                 ≡⟨ cong (_l∪m MultL κ (mapL κ distlawLcM (distlawLcM N)))
+--                                                         (lemma-lum κ (unitM (nowL x)) M) ⟩
+--                                                 (MultL κ (mapL κ distlawLcM (nowL (unitM x) l∪m (distlawLcM M))) l∪m
+--                                                  MultL κ (mapL κ distlawLcM (distlawLcM N)))
+--                                                 ≡⟨ refl ⟩
+--                                                 (MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x)) l∪m (distlawLcM M))) l∪m
+--                                                  MultL κ (mapL κ distlawLcM (distlawLcM N)))
+--                                                 ≡⟨ refl ⟩
+--                                                 (MultL κ (mapL κ distlawLcM (distlawLcM (unitM (nowL x) ∪ₘ M))) l∪m
+--                                                  MultL κ (mapL κ distlawLcM (distlawLcM N)))
+--                                                 ≡⟨ {!lemma-lum κ (unitM (nowL x) ∪ₘ M) N!} ⟩
+--                                                 MultL κ (mapL κ distlawLcM ((distlawLcM (unitM (nowL x) ∪ₘ M)) l∪m distlawLcM N))
+--                                                 ≡⟨ refl ⟩
+--                                                 MultL κ (mapL κ distlawLcM ((nowL (unitM x) l∪m distlawLcM M) l∪m distlawLcM N))
+--                                                 ≡⟨ cong (MultL κ) (cong (mapL κ distlawLcM)
+--                                                                         (assoc-l∪m (nowL (unitM x)) (distlawLcM M) (distlawLcM N))) ⟩
+--                                                 MultL κ (mapL κ distlawLcM (nowL (unitM x) l∪m (distlawLcM M l∪m distlawLcM N))) ∎
+-- lemma-lum κ (unitM (nowL x)) (ass M N O i) = isProp→PathP {!!} {!!} {!!} {!!}
+-- lemma-lum κ (unitM (nowL x)) (com M N i) = {!!}
+-- lemma-lum κ (unitM (nowL x)) (unitr N i) = {!!}
+-- lemma-lum κ (unitM (nowL x)) (trunc M N y z i i₁) = {!!}
+-- lemma-lum κ (unitM (stepL x)) N = cong stepL (later-ext λ α → lemma-lum κ (unitM (x α)) N  )
+-- lemma-lum κ (M₁ ∪ₘ M₂) N =  MultL κ (mapL κ distlawLcM (distlawLcM M₁ l∪m distlawLcM M₂)) l∪m
+--                             MultL κ (mapL κ distlawLcM (distlawLcM N))
+--                            ≡⟨ cong (_l∪m MultL κ (mapL κ distlawLcM (distlawLcM N))) (sym (lemma-lum κ M₁ M₂)) ⟩
+--                            ((MultL κ (mapL κ distlawLcM (distlawLcM M₁))l∪m MultL κ (mapL κ distlawLcM (distlawLcM M₂))) l∪m
+--                              MultL κ (mapL κ distlawLcM (distlawLcM N)))
+--                            ≡⟨ assoc-l∪m (MultL κ (mapL κ distlawLcM (distlawLcM M₁)))
+--                                         (MultL κ (mapL κ distlawLcM (distlawLcM M₂)))
+--                                         (MultL κ (mapL κ distlawLcM (distlawLcM N))) ⟩
+--                            (MultL κ (mapL κ distlawLcM (distlawLcM M₁))l∪m (MultL κ (mapL κ distlawLcM (distlawLcM M₂)) l∪m
+--                             MultL κ (mapL κ distlawLcM (distlawLcM N))))
+--                            ≡⟨ cong (MultL κ (mapL κ distlawLcM (distlawLcM M₁)) l∪m_) (lemma-lum κ M₂ N) ⟩ 
+--                            (MultL κ (mapL κ distlawLcM (distlawLcM M₁)) l∪m  MultL κ (mapL κ distlawLcM (distlawLcM M₂ l∪m distlawLcM N)) )
+--                            ≡⟨ cong (MultL κ (mapL κ distlawLcM (distlawLcM M₁)) l∪m_) refl ⟩
+--                            (MultL κ (mapL κ distlawLcM (distlawLcM M₁)) l∪m  MultL κ (mapL κ distlawLcM (distlawLcM (M₂ ∪ₘ N))) )
+--                            ≡⟨ lemma-lum κ M₁ ((M₂ ∪ₘ N)) ⟩
+--                            MultL κ (mapL κ distlawLcM (distlawLcM M₁ l∪m (distlawLcM M₂ l∪m distlawLcM N)))
+--                            ≡⟨ cong (MultL κ) (cong (mapL κ distlawLcM) (sym (assoc-l∪m (distlawLcM M₁) (distlawLcM M₂) (distlawLcM N)))) ⟩
+--                            MultL κ (mapL κ distlawLcM ((distlawLcM M₁ l∪m distlawLcM M₂) l∪m distlawLcM N)) ∎
+-- lemma-lum κ (ass M M₁ M₂ i) N = isProp→PathP (λ j → {!!}) (lemma-lum κ ((M ∪ₘ M₁) ∪ₘ M₂) N) (lemma-lum κ (M ∪ₘ (M₁ ∪ₘ M₂)) N) i
+-- lemma-lum κ (com M M₁ i) N = λ j → comm-l∪m {!!} {!!} i
+-- lemma-lum κ (unitr M i) N = λ j → {!!}
+-- lemma-lum κ (trunc M M₁ x y i i₁) N = {!!}
+
+-- --λ j → unitr (Multiset-unitlaw2 M j) i
+
+-- -- I don't know how to split cases within elimM, so here a lemma for the unitM case of elimM for multlawLcM2, split into nowL and stepL:
+-- multlawLcM2-unitMcase : {A : Set} {κ : Cl} → ∀(x : (myLift (myLift A κ) κ)) →
+--                                      distlawLcM (mapM (MultL κ) (unitM x)) ≡ MultL κ (mapL κ distlawLcM (distlawLcM (unitM x)))
+-- multlawLcM2-unitMcase (nowL x) = refl
+-- multlawLcM2-unitMcase (stepL x) = cong stepL (later-ext λ α → multlawLcM2-unitMcase (x α))
+
+-- -- and here the full proof of the second multiplication law:
+-- multlawLcM2 : {A : Set} (κ : Cl) → ∀(M : Multiset (myLift (myLift A κ) κ)) →
+--                                      distlawLcM (mapM (MultL κ) M) ≡ MultL κ (mapL κ distlawLcM (distlawLcM M))
+-- multlawLcM2 κ M = elimM
+--                    (λ N → ((distlawLcM (mapM (MultL κ) N) ≡ MultL κ (mapL κ distlawLcM (distlawLcM N))) ,
+--                           truncLcM (distlawLcM (mapM (MultL κ) N)) (MultL κ (mapL κ distlawLcM (distlawLcM N)))))
+--                    refl
+--                    (λ x → multlawLcM2-unitMcase x )
+--                    (λ {M N} → λ eqM eqN → distlawLcM (mapM (MultL κ) M) l∪m distlawLcM (mapM (MultL κ) N)
+--                                            ≡⟨ cong₂ (_l∪m_) eqM eqN ⟩
+--                                            (MultL κ (mapL κ distlawLcM (distlawLcM M)) l∪m MultL κ (mapL κ distlawLcM (distlawLcM N)))
+--                                            ≡⟨ lemma-lum κ M N ⟩
+--                                            MultL κ (mapL κ distlawLcM (distlawLcM M l∪m distlawLcM N)) ∎)
+--                    M
 
 
