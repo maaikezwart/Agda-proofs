@@ -80,19 +80,23 @@ module MyLiftSet {A : Set} {κ : Cl} where
                            (decodeEncode x y)
                            (isPropCover setA x y)
 
-bindL : {A B : Set} (κ : Cl) → (A → (myLift B κ)) → myLift A κ → myLift B κ
-bindL κ f (nowL a) = f a
-bindL κ f (stepL x) = stepL \(α) → bindL κ f (x α)
+mapL : {A B : Set} (κ : Cl) → (A → B) → (myLift A κ) → (myLift B κ)
+mapL κ f (nowL x) = nowL (f x)
+mapL κ f (stepL x) = stepL (\ α →  mapL κ f (x α))
 
 identity : {A : Set} → A → A
 identity x = x
 
+mapL-identity : {A : Set} {κ : Cl} → ∀ (x : myLift A κ) → mapL κ (λ y → y) x ≡ x
+mapL-identity (nowL x) = refl
+mapL-identity (stepL x) = cong stepL (later-ext λ α → mapL-identity (x α))
+
+bindL : {A B : Set} (κ : Cl) → (A → (myLift B κ)) → myLift A κ → myLift B κ
+bindL κ f (nowL a) = f a
+bindL κ f (stepL x) = stepL \(α) → bindL κ f (x α)
+
 MultL : {A : Set} (κ : Cl) → (myLift (myLift A κ) κ) → (myLift A κ)
 MultL κ = bindL κ identity
-
-mapL : {A B : Set} (κ : Cl) → (A → B) → (myLift A κ) → (myLift B κ)
-mapL κ f (nowL x) = nowL (f x)
-mapL κ f (stepL x) = stepL (\ α →  mapL κ f (x α))
 
 --checking that it is indeed a monad
 -- needs to satisfy three monad laws:

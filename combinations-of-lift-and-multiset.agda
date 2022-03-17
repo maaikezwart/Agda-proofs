@@ -541,7 +541,7 @@ distlawLcM (com x y i) = comm-l∪m (distlawLcM x) (distlawLcM y) i
 distlawLcM (unitr x i) = unit-l∪m (distlawLcM x) i
 distlawLcM (trunc x y x₁ y₁ i i₁) = truncLcM (distlawLcM x) (distlawLcM y) (λ j → distlawLcM (x₁ j)) (λ j → distlawLcM (y₁ j)) i i₁
 
---proof that distlawLcL is indeed a distributive law:
+--proof that distlawLcM is indeed a distributive law:
 --unit laws:
 unitlawLcM1 : {A : Set} {κ : Cl} → ∀(x : myLift A κ) → (distlawLcM (unitM x)) ≡  mapL κ unitM x
 unitlawLcM1 (nowL x) = refl
@@ -561,12 +561,6 @@ unitlawLcM2 M = elimM
 
 
 --multiplication laws:
-
-mapL-identity : {A : Set} {κ : Cl} → ∀ (x : myLift A κ) → mapL κ (λ y → y) x ≡ x
-mapL-identity (nowL x) = refl
-mapL-identity (stepL x) = cong stepL (later-ext λ α → mapL-identity (x α))
-
-
 multlawLcM1 : {A : Set} (κ : Cl) → ∀(M : Multiset (Multiset (myLift A κ))) → distlawLcM (Multiset-mult M) ≡
                                                                              mapL κ Multiset-mult (distlawLcM (mapM distlawLcM M))
 multlawLcM1 κ M = elimM
