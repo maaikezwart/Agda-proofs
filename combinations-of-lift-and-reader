@@ -494,7 +494,7 @@ dist-mapL-l∪m f fdist (stepL x) y = cong stepL (later-ext λ α → dist-mapL-
 _ll∪m_ : {A : Set} {κ : Cl} → (myLift (LcM A κ) κ) → (myLift (LcM A κ) κ) → (myLift (LcM A κ) κ)
 nowL x ll∪m nowL y = nowL (x l∪m y)
 nowL x ll∪m stepL y = stepL (λ α → (nowL x ll∪m (y α)))
-stepL x ll∪m y = stepL (λ α → ((x α) ll∪m y)) 
+stepL x ll∪m y = stepL (λ α → ((x α) ll∪m y))
 
 assoc-ll∪m : {A : Set} {κ : Cl} → ∀(x y z : (myLift (LcM A κ) κ)) → (x ll∪m y) ll∪m z ≡ x ll∪m (y ll∪m z)
 assoc-ll∪m (nowL x) (nowL y) (nowL z) = cong nowL (assoc-l∪m x y z)
@@ -522,14 +522,12 @@ multL-ll∪m-l∪m κ (nowL x) (stepL y) = stepL (λ α → MultL κ (nowL x ll�
                                           ≡⟨ refl ⟩
                                           stepL (λ α → x l∪m MultL κ (y α))
                                           ≡⟨ cong stepL (later-ext (λ α → comm-l∪m x (MultL κ (y α)))) ⟩
-                                          (stepL (λ α → MultL κ (y α) l∪m x))
+                                          (stepL (λ α → MultL κ (y α)) l∪m x)
                                           ≡⟨ refl ⟩
                                           (stepL (λ α → MultL κ (y α)) l∪m x)
                                           ≡⟨ comm-l∪m (stepL (λ α → MultL κ (y α))) x ⟩
                                           (x l∪m stepL (λ α → MultL κ (y α))) ∎
 multL-ll∪m-l∪m κ (stepL x) y = cong stepL (later-ext (λ α → multL-ll∪m-l∪m κ (x α) y))
-
-
 
 -- LcM is a monad via a distributive law, distributing Multiset over Lift.
 -- Here is the distributive law:
