@@ -85,7 +85,13 @@ identity x = x
 
 mapD-identity : {A : Set} {κ : Cl} → ∀ (x : Delay A κ) → mapD κ (λ y → y) x ≡ x
 mapD-identity (nowD x) = refl
-mapD-identity (stepD x) = cong stepD (later-ext λ α → mapD-identity (x α))
+mapD-identity {A}{κ}(stepD x) = mapD κ (λ y → y) (stepD x)
+                                 ≡⟨ refl ⟩
+                                 stepD (λ α → (mapD κ (λ y → y) (x α)))
+                                 ≡⟨ cong stepD ? ⟩
+                                 stepD (λ α → (x α))
+                                 ≡⟨ refl ⟩
+                                 stepD x ∎
 
 bindD : {A B : Set} (κ : Cl) → (A → (Delay B κ)) → Delay A κ → Delay B κ
 bindD κ f (nowD a) = f a
@@ -93,6 +99,8 @@ bindD κ f (stepD x) = stepD \(α) → bindD κ f (x α)
 
 MultD : {A : Set} (κ : Cl) → (Delay (Delay A κ) κ) → (Delay A κ)
 MultD κ = bindD κ identity
+
+
 
 -- Proving that Delay forms a monad
 
